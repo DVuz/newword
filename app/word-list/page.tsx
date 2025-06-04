@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -53,7 +53,7 @@ export default function WordList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 12,
+    limit: 20,
     total: 0,
     pages: 0,
   });
@@ -72,7 +72,7 @@ export default function WordList() {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '12',
+        limit: '20',
       });
 
       if (search) {
@@ -96,20 +96,17 @@ export default function WordList() {
     }
   };
 
-  // Search words
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setCurrentPage(1);
     await fetchWords(1, searchQuery);
   };
 
-  // Change page
   const handlePageChange = async (newPage: number) => {
     setCurrentPage(newPage);
     await fetchWords(newPage, searchQuery);
   };
 
-  // Play audio
   const playAudio = (audioUrl: string) => {
     if (audioUrl) {
       const audio = new Audio(audioUrl);
@@ -117,7 +114,6 @@ export default function WordList() {
     }
   };
 
-  // Flashcard functions
   const nextCard = () => {
     setShowAnswer(false);
     setCurrentCardIndex(prev => (prev + 1) % words.length);
@@ -144,30 +140,30 @@ export default function WordList() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Floating Image */}
-      <div className="fixed bottom-6 right-6 z-10">
-        <div className="w-16 h-16 rounded-full overflow-hidden shadow-lg border-2 border-white animate-bounce hover:scale-110 transition-transform cursor-pointer">
+      <div className="fixed bottom-4 right-4 z-10">
+        <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg border-2 border-white animate-bounce hover:scale-110 transition-transform cursor-pointer">
           <Image
             src="https://res.cloudinary.com/dfizo8h6h/image/upload/v1748938841/%C3%81nh_D%C6%B0%C6%A1ng_s_facebook_2023-4-17_story_1_nm0n4s.jpg"
             alt="Avatar"
-            width={64}
-            height={64}
+            width={48}
+            height={48}
             className="w-full h-full object-cover"
             priority
           />
         </div>
       </div>
 
-      <div className="container mx-auto p-4 max-w-5xl">
+      <div className="container mx-auto p-3 max-w-7xl">
         {/* Compact Header */}
-        <div className="mb-6">
-          <Button variant="ghost" onClick={() => router.back()} className="mb-4" size="sm">
-            <ArrowLeft className="mr-2 h-4 w-4" />
+        <div className="mb-4">
+          <Button variant="ghost" onClick={() => router.back()} className="mb-3" size="sm">
+            <ArrowLeft className="mr-1 h-3 w-3" />
             Quay lại
           </Button>
 
           {/* Search & Controls */}
-          <Card className="shadow-md">
-            <CardContent className="p-4 space-y-3">
+          <Card className="shadow-sm">
+            <CardContent className="p-3 space-y-2">
               {/* Search */}
               <form onSubmit={handleSearch} className="flex gap-2">
                 <Input
@@ -175,20 +171,21 @@ export default function WordList() {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   placeholder="Tìm từ..."
-                  className="h-9"
+                  className="h-8 text-sm"
                 />
-                <Button type="submit" disabled={loading} size="sm">
-                  <Search className="h-4 w-4" />
+                <Button type="submit" disabled={loading} size="sm" className="h-8 px-3">
+                  <Search className="h-3 w-3" />
                 </Button>
               </form>
 
               {/* Mode Toggle */}
               <div className="flex items-center justify-between">
-                <div className="flex gap-2">
+                <div className="flex gap-1">
                   <Button
                     variant={viewMode === 'grid' ? 'default' : 'outline'}
                     onClick={() => setViewMode('grid')}
                     size="sm"
+                    className="h-7 px-2 text-xs"
                   >
                     <Grid3X3 className="mr-1 h-3 w-3" />
                     Grid
@@ -200,13 +197,14 @@ export default function WordList() {
                       resetFlashcards();
                     }}
                     size="sm"
+                    className="h-7 px-2 text-xs"
                     disabled={words.length === 0}
                   >
                     <CreditCard className="mr-1 h-3 w-3" />
                     Card
                   </Button>
                 </div>
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="text-xs h-6">
                   {pagination.total} từ
                 </Badge>
               </div>
@@ -217,95 +215,135 @@ export default function WordList() {
         {/* Content */}
         {loading ? (
           <Card>
-            <CardContent className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin mr-2" />
-              <span className="text-sm">Đang tải...</span>
+            <CardContent className="flex items-center justify-center py-6">
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <span className="text-xs">Đang tải...</span>
             </CardContent>
           </Card>
         ) : error ? (
           <Alert variant="destructive">
-            <AlertDescription className="text-sm">{error}</AlertDescription>
+            <AlertDescription className="text-xs">{error}</AlertDescription>
           </Alert>
         ) : words.length === 0 ? (
           <Card>
-            <CardContent className="text-center py-8">
-              <p className="text-gray-500 text-sm">Không có từ nào</p>
+            <CardContent className="text-center py-6">
+              <p className="text-gray-500 text-xs">Không có từ nào</p>
             </CardContent>
           </Card>
         ) : (
           <>
-            {/* Grid View */}
+            {/* Grid View - Tối đa dữ liệu */}
             {viewMode === 'grid' && (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                   {words.map(word => (
-                    <Card key={word._id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        {/* Word Header */}
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-bold text-blue-600 text-lg">{word.word}</h3>
-                          {word.level && (
-                            <Badge variant="secondary" className="text-xs">
-                              {word.level}
-                            </Badge>
-                          )}
+                    <Card key={word._id} className="hover:shadow-md transition-shadow border">
+                      <CardContent className="p-3">
+                        {/* Header Row */}
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="font-bold text-blue-600 text-base leading-tight">{word.word}</h3>
+                          <div className="flex flex-col items-end gap-1">
+                            {word.level && (
+                              <Badge variant="secondary" className="text-xs h-5 px-1">
+                                {word.level}
+                              </Badge>
+                            )}
+                            {word.frequency && (
+                              <Badge variant="outline" className="text-xs h-5 px-1">
+                                {word.frequency.split(' ')[0]}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
 
                         {/* Pronunciation */}
-                        {word.pronunciation.uk && (
-                          <div className="text-xs text-gray-600 mb-2">
-                            /{word.pronunciation.uk}/
-                          </div>
-                        )}
+                        <div className="mb-2">
+                          {word.pronunciation.uk && (
+                            <div className="text-xs text-gray-600">
+                              UK: /{word.pronunciation.uk}/
+                            </div>
+                          )}
+                          {word.pronunciation.us && word.pronunciation.us !== word.pronunciation.uk && (
+                            <div className="text-xs text-gray-600">
+                              US: /{word.pronunciation.us}/
+                            </div>
+                          )}
+                        </div>
 
-                        {/* Vietnamese */}
-                        <div className="text-green-600 font-medium mb-3 text-sm">
+                        {/* Vietnamese Translation */}
+                        <div className="text-green-600 font-medium mb-2 text-sm leading-tight">
                           {word.vietnamese}
                         </div>
 
-                        {/* Main Meaning */}
-                        {word.meanings[0] && (
-                          <div className="mb-3">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Badge variant="outline" className="text-xs">
-                                {word.meanings[0].partOfSpeech}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-gray-700 line-clamp-2">
-                              {word.meanings[0].definition}
-                            </p>
-                            {word.meanings[0].examples[0] && (
-                              <p className="text-xs text-gray-500 italic mt-1 line-clamp-1">
-                                "{word.meanings[0].examples[0]}"
+                        {/* All Meanings */}
+                        <div className="space-y-2 mb-3">
+                          {word.meanings.slice(0, 3).map((meaning, idx) => (
+                            <div key={idx} className="border-l-2 border-gray-200 pl-2">
+                              <div className="flex items-center gap-1 mb-1">
+                                <Badge variant="outline" className="text-xs h-4 px-1">
+                                  {meaning.partOfSpeech}
+                                </Badge>
+                                <span className="text-xs text-gray-500">#{idx + 1}</span>
+                              </div>
+                              <p className="text-xs text-gray-700 leading-snug mb-1">
+                                {meaning.definition}
                               </p>
+                              {meaning.vietnamese && (
+                                <p className="text-xs text-green-600 italic mb-1">
+                                  → {meaning.vietnamese}
+                                </p>
+                              )}
+                              {meaning.examples[0] && (
+                                <p className="text-xs text-gray-500 italic leading-snug">
+                                  "{meaning.examples[0]}"
+                                </p>
+                              )}
+                              {meaning.examples[1] && (
+                                <p className="text-xs text-gray-500 italic leading-snug mt-1">
+                                  "{meaning.examples[1]}"
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                          {word.meanings.length > 3 && (
+                            <p className="text-xs text-gray-400 italic">
+                              +{word.meanings.length - 3} nghĩa khác...
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                          {/* Audio Buttons */}
+                          <div className="flex gap-1">
+                            {word.audio.uk && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => playAudio(word.audio.uk)}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <Volume2 className="h-2 w-2 mr-1" />
+                                UK
+                              </Button>
+                            )}
+                            {word.audio.us && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => playAudio(word.audio.us)}
+                                className="h-6 px-2 text-xs"
+                              >
+                                <Volume2 className="h-2 w-2 mr-1" />
+                                US
+                              </Button>
                             )}
                           </div>
-                        )}
 
-                        {/* Audio Buttons */}
-                        <div className="flex gap-2">
-                          {word.audio.uk && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => playAudio(word.audio.uk)}
-                              className="h-7 px-2 text-xs"
-                            >
-                              <Volume2 className="h-3 w-3 mr-1" />
-                              UK
-                            </Button>
-                          )}
-                          {word.audio.us && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => playAudio(word.audio.us)}
-                              className="h-7 px-2 text-xs"
-                            >
-                              <Volume2 className="h-3 w-3 mr-1" />
-                              US
-                            </Button>
-                          )}
+                          {/* Created Date */}
+                          <span className="text-xs text-gray-400">
+                            {new Date(word.createdAt).toLocaleDateString('vi-VN')}
+                          </span>
                         </div>
                       </CardContent>
                     </Card>
@@ -315,18 +353,18 @@ export default function WordList() {
                 {/* Compact Pagination */}
                 {pagination.pages > 1 && (
                   <Card>
-                    <CardContent className="p-3">
+                    <CardContent className="p-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-gray-600">
-                          {pagination.page}/{pagination.pages}
+                          Trang {pagination.page}/{pagination.pages} - {pagination.total} từ
                         </span>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => handlePageChange(currentPage - 1)}
                             disabled={currentPage === 1}
-                            className="h-8 px-3"
+                            className="h-7 px-2"
                           >
                             <ChevronLeft className="h-3 w-3" />
                           </Button>
@@ -335,7 +373,7 @@ export default function WordList() {
                             size="sm"
                             onClick={() => handlePageChange(currentPage + 1)}
                             disabled={currentPage === pagination.pages}
-                            className="h-8 px-3"
+                            className="h-7 px-2"
                           >
                             <ChevronRight className="h-3 w-3" />
                           </Button>
@@ -347,26 +385,22 @@ export default function WordList() {
               </div>
             )}
 
-            {/* Flashcard View */}
+            {/* Flashcard View - Gọn lại */}
             {viewMode === 'flashcard' && words.length > 0 && (
-              <div className="space-y-4">
-                {/* Flashcard Controls */}
+              <div className="space-y-3 max-w-2xl mx-auto">
+                {/* Controls */}
                 <Card>
-                  <CardContent className="p-3">
+                  <CardContent className="p-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
+                      <span className="text-xs text-gray-600">
                         {currentCardIndex + 1}/{words.length}
                       </span>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={resetFlashcards}>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="sm" onClick={resetFlashcards} className="h-7 px-2">
                           <RotateCcw className="h-3 w-3" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={flipCard}>
-                          {showAnswer ? (
-                            <EyeOff className="h-3 w-3" />
-                          ) : (
-                            <Eye className="h-3 w-3" />
-                          )}
+                        <Button variant="outline" size="sm" onClick={flipCard} className="h-7 px-2">
+                          {showAnswer ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                         </Button>
                       </div>
                     </div>
@@ -375,26 +409,35 @@ export default function WordList() {
 
                 {/* Flashcard */}
                 <Card className="cursor-pointer hover:shadow-lg transition-all" onClick={flipCard}>
-                  <CardContent className="p-6 text-center min-h-[300px] flex flex-col justify-center">
+                  <CardContent className="p-4 text-center min-h-[250px] flex flex-col justify-center">
                     {!showAnswer ? (
                       // Front - Word
-                      <div className="space-y-4">
-                        <h2 className="text-3xl font-bold text-blue-600">
+                      <div className="space-y-3">
+                        <h2 className="text-2xl font-bold text-blue-600">
                           {words[currentCardIndex].word}
                         </h2>
 
                         {words[currentCardIndex].pronunciation.uk && (
-                          <div className="text-lg text-gray-600">
+                          <div className="text-sm text-gray-600">
                             /{words[currentCardIndex].pronunciation.uk}/
                           </div>
                         )}
 
-                        {words[currentCardIndex].level && (
-                          <Badge variant="secondary">{words[currentCardIndex].level}</Badge>
-                        )}
+                        <div className="flex justify-center gap-1">
+                          {words[currentCardIndex].level && (
+                            <Badge variant="secondary" className="text-xs">
+                              {words[currentCardIndex].level}
+                            </Badge>
+                          )}
+                          {words[currentCardIndex].frequency && (
+                            <Badge variant="outline" className="text-xs">
+                              {words[currentCardIndex].frequency.split(' ')[0]}
+                            </Badge>
+                          )}
+                        </div>
 
                         {/* Audio */}
-                        <div className="flex justify-center gap-2">
+                        <div className="flex justify-center gap-1">
                           {words[currentCardIndex].audio.uk && (
                             <Button
                               variant="outline"
@@ -403,6 +446,7 @@ export default function WordList() {
                                 e.stopPropagation();
                                 playAudio(words[currentCardIndex].audio.uk);
                               }}
+                              className="h-7 px-2 text-xs"
                             >
                               <Volume2 className="mr-1 h-3 w-3" />
                               UK
@@ -416,6 +460,7 @@ export default function WordList() {
                                 e.stopPropagation();
                                 playAudio(words[currentCardIndex].audio.us);
                               }}
+                              className="h-7 px-2 text-xs"
                             >
                               <Volume2 className="mr-1 h-3 w-3" />
                               US
@@ -423,29 +468,29 @@ export default function WordList() {
                           )}
                         </div>
 
-                        <p className="text-gray-500 text-sm">Nhấn để xem nghĩa</p>
+                        <p className="text-gray-500 text-xs">Nhấn để xem nghĩa</p>
                       </div>
                     ) : (
                       // Back - Meaning
-                      <div className="space-y-4">
-                        <h2 className="text-2xl font-bold text-green-600">
+                      <div className="space-y-3">
+                        <h2 className="text-xl font-bold text-green-600">
                           {words[currentCardIndex].vietnamese}
                         </h2>
 
-                        <div className="space-y-3 text-left max-w-md mx-auto">
+                        <div className="space-y-2 text-left max-w-md mx-auto">
                           {words[currentCardIndex].meanings.slice(0, 2).map((meaning, idx) => (
-                            <div key={idx}>
-                              <Badge variant="outline" className="mb-2">
+                            <div key={idx} className="border-l-2 border-green-200 pl-2">
+                              <Badge variant="outline" className="text-xs mb-1">
                                 {meaning.partOfSpeech}
                               </Badge>
-                              <p className="text-gray-700 text-sm mb-1">{meaning.definition}</p>
+                              <p className="text-xs text-gray-700 mb-1">{meaning.definition}</p>
                               {meaning.vietnamese && (
-                                <p className="text-green-600 text-sm italic mb-1">
+                                <p className="text-xs text-green-600 italic mb-1">
                                   → {meaning.vietnamese}
                                 </p>
                               )}
                               {meaning.examples[0] && (
-                                <p className="text-gray-600 text-xs italic">
+                                <p className="text-xs text-gray-600 italic">
                                   "{meaning.examples[0]}"
                                 </p>
                               )}
@@ -453,7 +498,7 @@ export default function WordList() {
                           ))}
                         </div>
 
-                        <p className="text-gray-500 text-sm">Nhấn để xem từ</p>
+                        <p className="text-gray-500 text-xs">Nhấn để xem từ</p>
                       </div>
                     )}
                   </CardContent>
@@ -461,13 +506,14 @@ export default function WordList() {
 
                 {/* Navigation */}
                 <Card>
-                  <CardContent className="p-3">
+                  <CardContent className="p-2">
                     <div className="flex justify-between">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={prevCard}
                         disabled={words.length <= 1}
+                        className="h-7 px-3"
                       >
                         <ChevronLeft className="mr-1 h-3 w-3" />
                         Trước
@@ -477,6 +523,7 @@ export default function WordList() {
                         size="sm"
                         onClick={nextCard}
                         disabled={words.length <= 1}
+                        className="h-7 px-3"
                       >
                         Sau
                         <ChevronRight className="ml-1 h-3 w-3" />
