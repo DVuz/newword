@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+// Import với TypeScript proper way
 const { DatabaseManager } = require('@/lib/database');
 const { WordScraper } = require('@/lib/scraper');
 
@@ -51,9 +53,12 @@ export async function POST(request: NextRequest) {
       success: true,
       data: response,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ API Error:', error);
-    return NextResponse.json({ error: 'Internal server error: ' + error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error: ' + (error?.message || 'Unknown error') },
+      { status: 500 }
+    );
   }
 }
 
@@ -64,6 +69,8 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const page = parseInt(searchParams.get('page') || '1');
     const search = searchParams.get('search');
+
+    console.log('📖 GET request:', { page, limit, search });
 
     // Test database connection
     const dbConnected = await DatabaseManager.testConnection();
@@ -94,9 +101,12 @@ export async function GET(request: NextRequest) {
       success: true,
       data: result,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ GET API Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error: ' + (error?.message || 'Unknown error') },
+      { status: 500 }
+    );
   }
 }
 
@@ -110,6 +120,14 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Word parameter is required' }, { status: 400 });
     }
 
+    console.log('🗑️ DELETE request for word:', word);
+
+    // Test database connection
+    const dbConnected = await DatabaseManager.testConnection();
+    if (!dbConnected) {
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+    }
+
     const deleted = await DatabaseManager.deleteWord(word);
 
     if (deleted) {
@@ -120,8 +138,11 @@ export async function DELETE(request: NextRequest) {
     } else {
       return NextResponse.json({ error: 'Word not found' }, { status: 404 });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ DELETE API Error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Internal server error: ' + (error?.message || 'Unknown error') },
+      { status: 500 }
+    );
   }
 }

@@ -5,8 +5,13 @@ const uri =
   'mongodb+srv://DzungVu:dungvu26@cluster0.obujmgq.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
 const dbName = process.env.MONGODB_DB || 'newword';
 
-let client;
-let clientPromise;
+let client: any;
+let clientPromise: any;
+
+// Declare global type
+declare global {
+  var _mongoClientPromise: any;
+}
 
 if (process.env.NODE_ENV === 'development') {
   if (!global._mongoClientPromise) {
@@ -31,15 +36,69 @@ if (process.env.NODE_ENV === 'development') {
   clientPromise = client.connect();
 }
 
+interface WordMeaning {
+  partOfSpeech: string;
+  definition: string;
+  examples: string[];
+  vietnamese?: string;
+}
+
+interface WordData {
+  word: string;
+  pronunciation: {
+    uk: string;
+    us: string;
+  };
+  audio: {
+    uk: string;
+    us: string;
+  };
+  level: string;
+  frequency: string;
+  meanings: WordMeaning[];
+  vietnamese: string;
+  createdAt: Date;
+  updatedAt?: Date;
+}
+
+interface SaveResult {
+  success: boolean;
+  error?: string;
+}
+
+interface SaveWordsResult {
+  success: number;
+  errors: Array<{
+    word: string;
+    error: string;
+  }>;
+}
+
+interface PaginationResult {
+  words: WordData[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+}
+
+interface Statistics {
+  totalWords: number;
+  todayWords: number;
+  weekWords: number;
+}
+
 class DatabaseManager {
   // Test connection
-  static async testConnection() {
+  static async testConnection(): Promise<boolean> {
     try {
       const client = await clientPromise;
       await client.db('admin').command({ ping: 1 });
       console.log('✅ Database connection successful');
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Database connection failed:', error);
       return false;
     }
@@ -58,7 +117,7 @@ class DatabaseManager {
   }
 
   // Save single word
-  static async saveWord(wordData) {
+  static async saveWord(wordData: WordData): Promise<SaveResult> {
     try {
       const collection = await this.getWordsCollection();
 
@@ -81,16 +140,16 @@ class DatabaseManager {
       }
 
       return { success: true };
-    } catch (error) {
-      console.error(`Error saving word ${wordData.word}:`, error.message);
-      return { success: false, error: error.message };
+    } catch (error: any) {
+      console.error(`Error saving word ${wordData.word}:`, error?.message);
+      return { success: false, error: error?.message || 'Unknown error' };
     }
   }
 
   // Save multiple words
-  static async saveWords(words) {
+  static async saveWords(words: WordData[]): Promise<SaveWordsResult> {
     let success = 0;
-    const errors = [];
+    const errors: Array<{ word: string; error: string }> = [];
 
     for (const wordData of words) {
       const result = await this.saveWord(wordData);
@@ -99,7 +158,7 @@ class DatabaseManager {
       } else {
         errors.push({
           word: wordData.word,
-          error: result.error,
+          error: result.error || 'Unknown error',
         });
       }
     }
@@ -108,7 +167,7 @@ class DatabaseManager {
   }
 
   // Get words with pagination
-  static async getWords(page = 1, limit = 20) {
+  static async getWords(page: number = 1, limit: number = 20): Promise<PaginationResult> {
     try {
       const collection = await this.getWordsCollection();
 
@@ -130,14 +189,14 @@ class DatabaseManager {
           pages: Math.ceil(total / limit),
         },
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching words:', error);
-      throw new Error('Failed to fetch words');
+      throw new Error('Failed to fetch words: ' + (error?.message || 'Unknown error'));
     }
   }
 
   // Search words
-  static async searchWords(query) {
+  static async searchWords(query: string): Promise<WordData[]> {
     try {
       const collection = await this.getWordsCollection();
 
@@ -154,37 +213,37 @@ class DatabaseManager {
         .toArray();
 
       return words;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error searching words:', error);
-      throw new Error('Failed to search words');
+      throw new Error('Failed to search words: ' + (error?.message || 'Unknown error'));
     }
   }
 
   // Get word by name
-  static async getWordByName(word) {
+  static async getWordByName(word: string): Promise<WordData | null> {
     try {
       const collection = await this.getWordsCollection();
       return await collection.findOne({ word: word.toLowerCase() });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting word:', error);
       return null;
     }
   }
 
   // Delete word
-  static async deleteWord(word) {
+  static async deleteWord(word: string): Promise<boolean> {
     try {
       const collection = await this.getWordsCollection();
       const result = await collection.deleteOne({ word: word.toLowerCase() });
       return result.deletedCount > 0;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting word:', error);
       return false;
     }
   }
 
   // Get statistics
-  static async getStatistics() {
+  static async getStatistics(): Promise<Statistics> {
     try {
       const collection = await this.getWordsCollection();
 
@@ -202,11 +261,11 @@ class DatabaseManager {
       ]);
 
       return { totalWords, todayWords, weekWords };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error getting statistics:', error);
       return { totalWords: 0, todayWords: 0, weekWords: 0 };
     }
   }
 }
 
-module.exports = { DatabaseManager };
+export { DatabaseManager };
