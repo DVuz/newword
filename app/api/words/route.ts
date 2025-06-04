@@ -3,7 +3,7 @@ const { DatabaseManager } = require('@/lib/database');
 const { WordScraper } = require('@/lib/scraper');
 
 // POST handler for creating new words
-export async function POST(request) {
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { words, mode } = body;
@@ -58,7 +58,7 @@ export async function POST(request) {
 }
 
 // GET handler for fetching words
-export async function GET(request) {
+export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -101,7 +101,7 @@ export async function GET(request) {
 }
 
 // DELETE handler for deleting words
-export async function DELETE(request) {
+export async function DELETE(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const word = searchParams.get('word');
