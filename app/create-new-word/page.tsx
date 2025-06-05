@@ -109,7 +109,6 @@ export default function CreateNewWord() {
 
         </div>
       </div>
-
       <div className="container mx-auto p-6 max-w-2xl">
         {/* Header */}
         <div className="mb-8">
