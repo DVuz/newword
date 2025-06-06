@@ -7,14 +7,51 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ArrowLeft, Plus, Search, Edit3, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import {
+  ArrowLeft,
+  Plus,
+  Search,
+  Edit3,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+  Database,
+  Globe,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react';
+
+interface ErrorDetail {
+  word: string;
+  error: string;
+  type: 'SCRAPE_ERROR' | 'DATABASE_ERROR';
+}
 
 interface ProcessResult {
   processed: number;
   scraped: number;
   saved: number;
-  scrapeErrors: Array<{ word: string; error: string }>;
-  saveErrors: Array<{ word: string; error: string }>;
+  scrapeErrors: ErrorDetail[];
+  saveErrors: ErrorDetail[];
+  summary: {
+    total: number;
+    successful: number;
+    failed: number;
+    scrapeFailures: number;
+    saveFailures: number;
+  };
+  details: {
+    cleanedWords: string[];
+    scrapedWords: string[];
+    savedWords: string[];
+    failedWords: Array<{
+      word: string;
+      reason: string;
+      detail: string;
+    }>;
+  };
 }
 
 export default function CreateNewWord() {
@@ -24,6 +61,7 @@ export default function CreateNewWord() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [error, setError] = useState<string>('');
+  const [showDetails, setShowDetails] = useState(false);
   const router = useRouter();
 
   // Xử lý bulk input
@@ -106,10 +144,10 @@ export default function CreateNewWord() {
               priority
             />
           </div>
-
         </div>
       </div>
-      <div className="container mx-auto p-6 max-w-2xl">
+
+      <div className="container mx-auto p-6 max-w-3xl">
         {/* Header */}
         <div className="mb-8">
           <Button
@@ -133,26 +171,173 @@ export default function CreateNewWord() {
             </Alert>
           )}
 
-          {/* Success Result */}
+          {/* Enhanced Success Result */}
           {result && (
-            <Alert>
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="space-y-1">
-                  <div>✅ Đã xử lý: {result.processed} từ</div>
-                  <div>📚 Scrape thành công: {result.scraped} từ</div>
-                  <div>💾 Lưu database: {result.saved} từ</div>
-                  {result.scrapeErrors.length > 0 && (
-                    <div className="text-orange-600">
-                      ⚠️ Lỗi scrape: {result.scrapeErrors.length} từ
+            <div className="space-y-4">
+              {/* Summary Card */}
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle className="h-4 w-4 text-green-600" />
+                <AlertDescription>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-green-600">
+                        {result.summary.successful}
+                      </div>
+                      <div className="text-xs text-green-700">Thành công</div>
                     </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-orange-600">
+                        {result.summary.scrapeFailures}
+                      </div>
+                      <div className="text-xs text-orange-700">Lỗi Scrape</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-red-600">
+                        {result.summary.saveFailures}
+                      </div>
+                      <div className="text-xs text-red-700">Lỗi Database</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-blue-600">{result.summary.total}</div>
+                      <div className="text-xs text-blue-700">Tổng cộng</div>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+
+              {/* Detailed Results */}
+              {(result.scrapeErrors.length > 0 || result.saveErrors.length > 0) && (
+                <Card className="border-orange-200">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg flex items-center">
+                        <AlertTriangle className="h-5 w-5 text-orange-500 mr-2" />
+                        Chi tiết lỗi ({result.summary.failed} từ)
+                      </CardTitle>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowDetails(!showDetails)}
+                        className="text-orange-600"
+                      >
+                        {showDetails ? (
+                          <>
+                            <ChevronUp className="h-4 w-4 mr-1" />
+                            Ẩn
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-4 w-4 mr-1" />
+                            Xem chi tiết
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardHeader>
+
+                  {showDetails && (
+                    <CardContent className="space-y-4">
+                      {/* Scrape Errors */}
+                      {result.scrapeErrors.length > 0 && (
+                        <div>
+                          <div className="flex items-center mb-3">
+                            <Globe className="h-4 w-4 text-orange-500 mr-2" />
+                            <h4 className="font-semibold text-orange-700">
+                              Lỗi Scrape ({result.scrapeErrors.length} từ)
+                            </h4>
+                          </div>
+                          <div className="space-y-2">
+                            {result.scrapeErrors.map((err, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-orange-50 border border-orange-200 rounded-md p-3"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className="text-orange-700 border-orange-300"
+                                      >
+                                        {err.word}
+                                      </Badge>
+                                      <Badge variant="secondary" className="text-xs">
+                                        SCRAPE ERROR
+                                      </Badge>
+                                    </div>
+                                    <p className="text-sm text-orange-600 mt-1">{err.error}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Save Errors */}
+                      {result.saveErrors.length > 0 && (
+                        <div>
+                          <div className="flex items-center mb-3">
+                            <Database className="h-4 w-4 text-red-500 mr-2" />
+                            <h4 className="font-semibold text-red-700">
+                              Lỗi Database ({result.saveErrors.length} từ)
+                            </h4>
+                          </div>
+                          <div className="space-y-2">
+                            {result.saveErrors.map((err, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-red-50 border border-red-200 rounded-md p-3"
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <Badge
+                                        variant="outline"
+                                        className="text-red-700 border-red-300"
+                                      >
+                                        {err.word}
+                                      </Badge>
+                                      <Badge variant="destructive" className="text-xs">
+                                        DATABASE ERROR
+                                      </Badge>
+                                    </div>
+                                    <p className="text-sm text-red-600 mt-1">{err.error}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Successful Words */}
+                      {result.details.savedWords.length > 0 && (
+                        <div>
+                          <div className="flex items-center mb-3">
+                            <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                            <h4 className="font-semibold text-green-700">
+                              Từ đã lưu thành công ({result.details.savedWords.length} từ)
+                            </h4>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {result.details.savedWords.map((word, idx) => (
+                              <Badge
+                                key={idx}
+                                variant="secondary"
+                                className="bg-green-100 text-green-700"
+                              >
+                                {word}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
                   )}
-                  {result.saveErrors.length > 0 && (
-                    <div className="text-red-600">❌ Lỗi lưu: {result.saveErrors.length} từ</div>
-                  )}
-                </div>
-              </AlertDescription>
-            </Alert>
+                </Card>
+              )}
+            </div>
           )}
 
           {/* Mode Toggle */}

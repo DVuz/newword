@@ -32,22 +32,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
     }
 
-    // Scrape words
+    // Scrape words với detailed error tracking
+    console.log('🕷️ Starting scraping...');
     const { results, errors: scrapeErrors } = await WordScraper.scrapeWords(cleanWords);
+    console.log(`📊 Scrape completed: ${results.length} success, ${scrapeErrors.length} errors`);
 
-    // Save to database
+    // Save to database với detailed error tracking
     console.log('💾 Saving to database...');
     const { success, errors: saveErrors } = await DatabaseManager.saveWords(results);
+    console.log(`📊 Save completed: ${success} success, ${saveErrors.length} errors`);
 
+    // Enhanced response với detailed breakdown
     const response = {
       processed: cleanWords.length,
       scraped: results.length,
       saved: success,
-      scrapeErrors,
-      saveErrors,
+      scrapeErrors: scrapeErrors.map(err => ({
+        word: err.word,
+        error: err.error,
+        type: 'SCRAPE_ERROR',
+      })),
+      saveErrors: saveErrors.map(err => ({
+        word: err.word,
+        error: err.error,
+        type: 'DATABASE_ERROR',
+      })),
+      // Summary cho UI
+      summary: {
+        total: cleanWords.length,
+        successful: success,
+        failed: scrapeErrors.length + saveErrors.length,
+        scrapeFailures: scrapeErrors.length,
+        saveFailures: saveErrors.length,
+      },
+      // Detailed breakdown cho debugging
+      details: {
+        cleanedWords: cleanWords,
+        scrapedWords: results.map(r => r.word),
+        savedWords: results.slice(0, success).map(r => r.word),
+        failedWords: [
+          ...scrapeErrors.map(e => ({ word: e.word, reason: 'Scrape failed', detail: e.error })),
+          ...saveErrors.map(e => ({ word: e.word, reason: 'Save failed', detail: e.error })),
+        ],
+      },
     };
 
-    console.log('✅ Final response:', response);
+    console.log('✅ Final response summary:', response.summary);
 
     return NextResponse.json({
       success: true,
@@ -56,7 +86,10 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('❌ API Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error: ' + (error?.message || 'Unknown error') },
+      {
+        error: 'Internal server error: ' + (error?.message || 'Unknown error'),
+        details: error?.stack || 'No stack trace available',
+      },
       { status: 500 }
     );
   }
