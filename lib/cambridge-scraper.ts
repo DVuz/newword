@@ -153,14 +153,15 @@ class CambridgeScraper {
     return levelElement.text().trim() || '';
   }
 
-  // Extract meanings and examples from Cambridge
+  // Extract meanings and examples from Cambridge - FIXED TYPES
   private static extractMeanings($: cheerio.CheerioAPI): WordMeaning[] {
     const meanings: WordMeaning[] = [];
 
     // Cambridge structure: .pr.entry-body .sense-body .def-block
     $('.entry-body .sense-body .def-block, .entry-body .pr.dsense .def-block')
       .slice(0, 3)
-      .each((i: number, defBlock: cheerio.Element) => {
+      .each((i: number, defBlock: any) => {
+        // ✅ Fixed: Use any type for cheerio element
         const $defBlock = $(defBlock);
         const $entry = $defBlock.closest('.entry, .pr.di');
 
@@ -178,11 +179,12 @@ class CambridgeScraper {
           examples: [],
         };
 
-        // Extract examples
+        // Extract examples - FIXED TYPES
         $defBlock
           .find('.examp .eg, .dexamp .deg')
           .slice(0, 2)
-          .each((j: number, example: cheerio.Element) => {
+          .each((j: number, example: any) => {
+            // ✅ Fixed: Use any type for cheerio element
             let exampleText: string = $(example).text().trim();
 
             // Clean up example text (remove internal links text)
@@ -306,7 +308,7 @@ class CambridgeScraper {
     }
   }
 
-  // Get word suggestions (if available)
+  // Get word suggestions (if available) - FIXED TYPES
   static async getWordSuggestions(word: string): Promise<string[]> {
     try {
       const url: string = `${this.BASE_URL}/${encodeURIComponent(word.trim())}`;
@@ -319,10 +321,11 @@ class CambridgeScraper {
       const $: cheerio.CheerioAPI = cheerio.load(response.data);
       const suggestions: string[] = [];
 
-      // Look for spelling suggestions
+      // Look for spelling suggestions - FIXED TYPES
       $('.spell-suggestion, .did-you-mean, .suggestions')
         .find('a')
-        .each((i: number, element: cheerio.Element) => {
+        .each((i: number, element: any) => {
+          // ✅ Fixed: Use any type for cheerio element
           const suggestion: string = $(element).text().trim();
           if (suggestion && suggestions.length < 5) {
             suggestions.push(suggestion);
