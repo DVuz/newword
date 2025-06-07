@@ -21,6 +21,8 @@ import {
   Zap,
   Clock,
   Turtle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface WordData {
@@ -75,6 +77,7 @@ export default function ListenView({
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [currentAudioType, setCurrentAudioType] = useState<'uk' | 'us'>('uk');
   const [playbackPhase, setPlaybackPhase] = useState<'idle' | 'playing' | 'waiting'>('idle');
+  const [showSettings, setShowSettings] = useState(false); // Mobile settings toggle
 
   // Settings - CÀI ĐẶT PHÙ HỢP HỢN
   const [settings, setSettings] = useState({
@@ -133,7 +136,6 @@ export default function ListenView({
         try {
           const audio = new Audio(audioUrl);
           audioRef.current = audio;
-          // ✅ CẬP NHẬT TỐC ĐỘ REAL-TIME
           audio.playbackRate = settings.playbackSpeed;
 
           const handleEnded = () => {
@@ -227,7 +229,6 @@ export default function ListenView({
 
           if (!isPlayingRef.current) return;
 
-          // ✅ SỬ DỤNG CURRENT pauseBetweenAudios
           console.log(`⏸️ Pause ${settings.pauseBetweenAudios}ms between UK-US`);
           setPlaybackPhase('waiting');
           await delay(settings.pauseBetweenAudios);
@@ -254,7 +255,6 @@ export default function ListenView({
 
       // Xác định bước tiếp theo
       if (currentWordIndex < words.length - 1) {
-        // ✅ SỬ DỤNG CURRENT pauseBetweenWords
         console.log(`⏸️ Pause ${settings.pauseBetweenWords}ms before next word`);
         setPlaybackPhase('waiting');
         await delay(settings.pauseBetweenWords);
@@ -264,7 +264,6 @@ export default function ListenView({
         console.log(`➡️ Moving to word ${currentWordIndex + 2}/${words.length}`);
         setCurrentWordIndex(currentWordIndex + 1);
       } else if (settings.autoNextPage && currentPage < pagination.pages) {
-        // Chuyển trang
         console.log(`⏸️ Pause ${settings.pauseBetweenWords}ms before next page`);
         setPlaybackPhase('waiting');
         await delay(settings.pauseBetweenWords);
@@ -306,7 +305,7 @@ export default function ListenView({
   }, [
     words,
     currentWordIndex,
-    settings, // ✅ DEPENDENCIES BAO GỒM SETTINGS
+    settings,
     currentPage,
     pagination.pages,
     playAudio,
@@ -454,13 +453,13 @@ export default function ListenView({
   const globalWordIndex = (currentPage - 1) * pagination.limit + currentWordIndex + 1;
 
   return (
-    <div className=" mx-auto space-y-4">
-      {/* Header - Compact */}
+    <div className="max-w-6xl mx-auto space-y-3 px-2 sm:px-4">
+      {/* Header - Mobile Optimized */}
       <Card className="bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200">
         <CardContent className="p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-purple-700 flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-base sm:text-lg font-bold text-purple-700 flex items-center gap-2 flex-wrap">
                 🎧 Chế độ Nghe Tự Động
                 {settings.playBothAccents ? (
                   <Badge variant="secondary" className="text-xs">
@@ -472,42 +471,42 @@ export default function ListenView({
                   </Badge>
                 )}
                 <Badge variant="outline" className="text-xs">
-                  {settings.playbackSpeed}x speed
+                  {settings.playbackSpeed}x
                 </Badge>
               </h2>
-              <p className="text-xs text-purple-600">
+              <p className="text-xs text-purple-600 mt-1">
                 Tự động phát {settings.playBothAccents ? 'UK → US' : 'US'} → chuyển từ tiếp theo
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 flex-shrink-0">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={resetToBeginning}
                 disabled={isAutoPlaying}
-                className="h-8 px-3"
+                className="h-8 px-2 sm:px-3"
               >
-                <RotateCcw className="h-4 w-4 mr-1" />
-                Reset
+                <RotateCcw className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Reset</span>
               </Button>
 
               <Button
                 variant={isAutoPlaying ? 'destructive' : 'default'}
                 size="sm"
                 onClick={isAutoPlaying ? stopAutoPlay : startAutoPlay}
-                className="h-8 px-4"
+                className="h-8 px-3 sm:px-4"
                 disabled={words.length === 0}
               >
                 {isAutoPlaying ? (
                   <>
-                    <Pause className="h-4 w-4 mr-1" />
-                    Dừng
+                    <Pause className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Dừng</span>
                   </>
                 ) : (
                   <>
-                    <Play className="h-4 w-4 mr-1" />
-                    Bắt đầu
+                    <Play className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Bắt đầu</span>
                   </>
                 )}
               </Button>
@@ -516,22 +515,238 @@ export default function ListenView({
         </CardContent>
       </Card>
 
-      {/* Layout 2 cột */}
+      {/* Quick Controls Bar - Mobile */}
+      <div className="block lg:hidden">
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium">Điều khiển nhanh</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSettings(!showSettings)}
+                className="h-8 px-2"
+              >
+                {showSettings ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+
+            {/* Quick Presets Always Visible */}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8 flex items-center justify-center gap-1"
+                onClick={() => applyPreset('fast')}
+              >
+                <Zap className="h-3 w-3" />
+                Nhanh
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8 flex items-center justify-center gap-1"
+                onClick={() => applyPreset('normal')}
+              >
+                <Clock className="h-3 w-3" />
+                Vừa
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-8 flex items-center justify-center gap-1"
+                onClick={() => applyPreset('slow')}
+              >
+                <Turtle className="h-3 w-3" />
+                Chậm
+              </Button>
+            </div>
+
+            {/* Manual Navigation */}
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={skipToPrev}
+                disabled={isAutoPlaying || (currentWordIndex === 0 && currentPage === 1)}
+                className="h-8 px-3"
+              >
+                <SkipBack className="h-4 w-4 mr-1" />
+                Trước
+              </Button>
+
+              <div className="text-center px-3">
+                <div className="text-sm font-medium text-gray-700">
+                  {currentWordIndex + 1}/{words.length}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Từ {globalWordIndex}/{pagination.total}
+                </div>
+              </div>
+
+              <Button variant="outline" size="sm" onClick={skipToNext} className="h-8 px-3">
+                Sau
+                <SkipForward className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="mt-3">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Tiến độ</span>
+                <span>{Math.round((globalWordIndex / pagination.total) * 100)}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-gradient-to-r from-purple-500 to-purple-600 h-2 rounded-full transition-all duration-500"
+                  style={{
+                    width: `${(globalWordIndex / pagination.total) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Status */}
+            {isAutoPlaying && (
+              <div className="text-center p-2 bg-purple-50 rounded text-sm mt-3">
+                {playbackPhase === 'playing' && (
+                  <span className="text-purple-600">
+                    🔊 Đang phát {currentAudioType === 'uk' ? '🇬🇧 UK' : '🇺🇸 US'}
+                    <span className="ml-1 text-xs">({settings.playbackSpeed}x)</span>
+                  </span>
+                )}
+                {playbackPhase === 'waiting' && (
+                  <span className="text-purple-600">⏳ Đang nghỉ...</span>
+                )}
+              </div>
+            )}
+
+            {/* Collapsible Settings */}
+            {showSettings && (
+              <div className="mt-4 pt-4 border-t space-y-4">
+                {/* Basic Switches */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs">UK + US</label>
+                    <Switch
+                      checked={settings.playBothAccents}
+                      onCheckedChange={checked =>
+                        setSettings(prev => ({ ...prev, playBothAccents: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs">Tự chuyển trang</label>
+                    <Switch
+                      checked={settings.autoNextPage}
+                      onCheckedChange={checked =>
+                        setSettings(prev => ({ ...prev, autoNextPage: checked }))
+                      }
+                    />
+                  </div>
+                </div>
+
+                {/* Timing Controls */}
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs">UK-US: {settings.pauseBetweenAudios}ms</label>
+                    </div>
+                    <Slider
+                      value={[settings.pauseBetweenAudios]}
+                      onValueChange={([value]) =>
+                        setSettings(prev => ({ ...prev, pauseBetweenAudios: value }))
+                      }
+                      min={200}
+                      max={2000}
+                      step={50}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs">Từ: {settings.pauseBetweenWords}ms</label>
+                    </div>
+                    <Slider
+                      value={[settings.pauseBetweenWords]}
+                      onValueChange={([value]) =>
+                        setSettings(prev => ({ ...prev, pauseBetweenWords: value }))
+                      }
+                      min={300}
+                      max={3000}
+                      step={50}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="text-xs">Tốc độ: {settings.playbackSpeed}x</label>
+                    </div>
+                    <Slider
+                      value={[settings.playbackSpeed]}
+                      onValueChange={([value]) => {
+                        setSettings(prev => ({ ...prev, playbackSpeed: value }));
+                        if (audioRef.current) {
+                          audioRef.current.playbackRate = value;
+                        }
+                      }}
+                      min={0.5}
+                      max={2.0}
+                      step={0.1}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
+
+                {/* Display Options */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs">Hiển thị từ</label>
+                    <Switch
+                      checked={settings.showWord}
+                      onCheckedChange={checked =>
+                        setSettings(prev => ({ ...prev, showWord: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs">Hiển thị nghĩa</label>
+                    <Switch
+                      checked={settings.showMeaning}
+                      onCheckedChange={checked =>
+                        setSettings(prev => ({ ...prev, showMeaning: checked }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Layout - Responsive */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Cột phải - Word Display */}
-        <div className="lg:col-span-2">
+        {/* Word Display - Mobile First */}
+        <div className="lg:col-span-2 order-1 lg:order-2">
           <Card
             className={`transition-all duration-300 ${
               isAutoPlaying ? 'ring-2 ring-purple-300 shadow-lg' : ''
             } ${playbackPhase === 'playing' ? 'bg-purple-50' : ''}`}
           >
-            <CardContent className="p-8 text-center min-h-[500px] flex flex-col justify-center">
+            <CardContent className="p-4 sm:p-8 text-center min-h-[400px] sm:min-h-[500px] flex flex-col justify-center">
               {currentWord ? (
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   {settings.showWord && (
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       <h1
-                        className={`text-5xl font-bold transition-all duration-300 ${
+                        className={`text-3xl sm:text-5xl font-bold transition-all duration-300 ${
                           isAutoPlaying && playbackPhase === 'playing'
                             ? 'text-purple-600 scale-105 animate-pulse'
                             : 'text-gray-700'
@@ -540,15 +755,15 @@ export default function ListenView({
                         {currentWord.word}
                       </h1>
 
-                      {/* Pronunciation - Cả UK và US */}
-                      <div className="space-y-2">
+                      {/* Pronunciation - Responsive */}
+                      <div className="space-y-1 sm:space-y-2">
                         {currentWord.pronunciation.uk && (
-                          <div className="text-xl text-gray-600">
+                          <div className="text-base sm:text-xl text-gray-600">
                             🇬🇧 /{currentWord.pronunciation.uk}/
                           </div>
                         )}
                         {currentWord.pronunciation.us && (
-                          <div className="text-xl text-gray-600">
+                          <div className="text-base sm:text-xl text-gray-600">
                             🇺🇸 /{currentWord.pronunciation.us}/
                           </div>
                         )}
@@ -556,11 +771,15 @@ export default function ListenView({
 
                       <div className="flex justify-center gap-2 flex-wrap">
                         {currentWord.level && (
-                          <Badge variant="secondary">{currentWord.level}</Badge>
+                          <Badge variant="secondary" className="text-xs">
+                            {currentWord.level}
+                          </Badge>
                         )}
                         <Badge
                           variant={playbackPhase === 'playing' ? 'default' : 'secondary'}
-                          className={playbackPhase === 'playing' ? 'bg-purple-600' : ''}
+                          className={`text-xs ${
+                            playbackPhase === 'playing' ? 'bg-purple-600' : ''
+                          }`}
                         >
                           {playbackPhase === 'playing'
                             ? `🔊 ${currentAudioType === 'uk' ? '🇬🇧 UK' : '🇺🇸 US'} (${
@@ -573,20 +792,22 @@ export default function ListenView({
                   )}
 
                   {settings.showMeaning && (
-                    <div className="border-t pt-6 space-y-4">
-                      <h2 className="text-3xl font-semibold text-green-600">
+                    <div className="border-t pt-4 sm:pt-6 space-y-3 sm:space-y-4">
+                      <h2 className="text-xl sm:text-3xl font-semibold text-green-600">
                         {currentWord.vietnamese}
                       </h2>
 
-                      <div className="space-y-3 text-left max-w-2xl mx-auto">
+                      <div className="space-y-2 sm:space-y-3 text-left max-w-2xl mx-auto">
                         {currentWord.meanings.slice(0, 2).map((meaning, idx) => (
-                          <div key={idx} className="border-l-4 border-green-200 pl-4">
-                            <Badge variant="outline" className="text-sm mb-2">
+                          <div key={idx} className="border-l-4 border-green-200 pl-3 sm:pl-4">
+                            <Badge variant="outline" className="text-xs mb-1 sm:mb-2">
                               {meaning.partOfSpeech}
                             </Badge>
-                            <p className="text-gray-700">{meaning.definition}</p>
+                            <p className="text-sm sm:text-base text-gray-700">
+                              {meaning.definition}
+                            </p>
                             {meaning.examples && meaning.examples[0] && (
-                              <p className="text-sm text-gray-500 italic mt-1">
+                              <p className="text-xs sm:text-sm text-gray-500 italic mt-1">
                                 "{meaning.examples[0]}"
                               </p>
                             )}
@@ -598,12 +819,12 @@ export default function ListenView({
 
                   {!settings.showWord && !settings.showMeaning && (
                     <div className="text-gray-500">
-                      <Volume2 className="h-24 w-24 mx-auto mb-6 opacity-50" />
-                      <p className="text-2xl">Chế độ chỉ nghe</p>
-                      <p className="text-lg mt-2">
+                      <Volume2 className="h-16 w-16 sm:h-24 sm:w-24 mx-auto mb-4 sm:mb-6 opacity-50" />
+                      <p className="text-xl sm:text-2xl">Chế độ chỉ nghe</p>
+                      <p className="text-base sm:text-lg mt-2">
                         {settings.playBothAccents ? '🇬🇧 UK + 🇺🇸 US' : '🇺🇸 US Only'}
                       </p>
-                      <p className="text-lg mt-2">
+                      <p className="text-base sm:text-lg mt-2">
                         Từ {currentWordIndex + 1}/{words.length} • {settings.playbackSpeed}x
                       </p>
                     </div>
@@ -615,7 +836,7 @@ export default function ListenView({
                       {[0, 1, 2].map(i => (
                         <div
                           key={i}
-                          className="w-4 h-4 bg-purple-500 rounded-full animate-bounce"
+                          className="w-3 h-3 sm:w-4 sm:h-4 bg-purple-500 rounded-full animate-bounce"
                           style={{ animationDelay: `${i * 0.1}s` }}
                         />
                       ))}
@@ -625,23 +846,23 @@ export default function ListenView({
                   {/* No audio warning */}
                   {!currentWord.audio.uk && !currentWord.audio.us && (
                     <div className="mt-4 text-amber-600 text-sm flex items-center justify-center gap-2">
-                      <VolumeX className="h-5 w-5" />
+                      <VolumeX className="h-4 w-4 sm:h-5 sm:w-5" />
                       Không có audio cho từ này
                     </div>
                   )}
                 </div>
               ) : (
                 <div className="text-gray-500">
-                  <p className="text-2xl">Không có từ vựng để hiển thị</p>
+                  <p className="text-xl sm:text-2xl">Không có từ vựng để hiển thị</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Cột trái - Settings & Controls */}
-        <div className="lg:col-span-1 space-y-4">
-          {/* Quick Presets - MỚI */}
+        {/* Desktop Settings Panel */}
+        <div className="hidden lg:block lg:col-span-1 space-y-4 order-2 lg:order-1">
+          {/* Quick Presets */}
           <Card>
             <CardContent className="p-4 space-y-3">
               <h3 className="font-medium text-sm flex items-center gap-2">
@@ -649,13 +870,12 @@ export default function ListenView({
                 Cài đặt nhanh
               </h3>
 
-                <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   className="text-xs h-8 flex items-center justify-center gap-1"
                   onClick={() => applyPreset('fast')}
-                  disabled={isAutoPlaying}
                 >
                   <Zap className="h-3 w-3" />
                   Nhanh
@@ -665,7 +885,6 @@ export default function ListenView({
                   size="sm"
                   className="text-xs h-8 flex items-center justify-center gap-1"
                   onClick={() => applyPreset('normal')}
-                  disabled={isAutoPlaying}
                 >
                   <Clock className="h-3 w-3" />
                   Vừa
@@ -675,12 +894,11 @@ export default function ListenView({
                   size="sm"
                   className="text-xs h-8 flex items-center justify-center gap-1"
                   onClick={() => applyPreset('slow')}
-                  disabled={isAutoPlaying}
                 >
                   <Turtle className="h-3 w-3" />
                   Chậm
                 </Button>
-                </div>
+              </div>
 
               <div className="text-xs text-gray-500 space-y-1">
                 <div>• Nhanh: UK-US 300ms, Từ 600ms, 1.5x</div>
@@ -706,7 +924,6 @@ export default function ListenView({
                   onCheckedChange={checked =>
                     setSettings(prev => ({ ...prev, playBothAccents: checked }))
                   }
-                  // ✅ CHO PHÉP THAY ĐỔI KHI ĐANG PHÁT
                 />
               </div>
 
@@ -718,11 +935,10 @@ export default function ListenView({
                   onCheckedChange={checked =>
                     setSettings(prev => ({ ...prev, autoNextPage: checked }))
                   }
-                  // ✅ CHO PHÉP THAY ĐỔI KHI ĐANG PHÁT
                 />
               </div>
 
-              {/* Pause Between Audios - CẢI TIẾN */}
+              {/* Pause Between Audios */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-sm">Nghỉ giữa UK-US</label>
@@ -734,13 +950,11 @@ export default function ListenView({
                   value={[settings.pauseBetweenAudios]}
                   onValueChange={([value]) => {
                     setSettings(prev => ({ ...prev, pauseBetweenAudios: value }));
-                    console.log(`🔧 UK-US pause changed to ${value}ms`);
                   }}
                   min={200}
                   max={2000}
                   step={50}
-                  // ✅ BỎ DISABLED - CHO PHÉP THAY ĐỔI KHI ĐANG PHÁT
-                  className={`w-full ${isAutoPlaying ? 'opacity-90' : ''}`}
+                  className="w-full"
                 />
                 <div className="flex justify-between text-xs text-gray-500">
                   <span>200ms</span>
@@ -749,7 +963,7 @@ export default function ListenView({
                 </div>
               </div>
 
-              {/* Pause Between Words - CẢI TIẾN */}
+              {/* Pause Between Words */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-sm">Nghỉ giữa từ</label>
@@ -761,13 +975,11 @@ export default function ListenView({
                   value={[settings.pauseBetweenWords]}
                   onValueChange={([value]) => {
                     setSettings(prev => ({ ...prev, pauseBetweenWords: value }));
-                    console.log(`🔧 Word pause changed to ${value}ms`);
                   }}
                   min={300}
                   max={3000}
                   step={50}
-                  // ✅ BỎ DISABLED - CHO PHÉP THAY ĐỔI KHI ĐANG PHÁT
-                  className={`w-full ${isAutoPlaying ? 'opacity-90' : ''}`}
+                  className="w-full"
                 />
                 <div className="flex justify-between text-xs text-gray-500">
                   <span>0.3s</span>
@@ -776,7 +988,7 @@ export default function ListenView({
                 </div>
               </div>
 
-              {/* Playback Speed - CẢI TIẾN */}
+              {/* Playback Speed */}
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-sm">Tốc độ phát</label>
@@ -791,17 +1003,14 @@ export default function ListenView({
                   value={[settings.playbackSpeed]}
                   onValueChange={([value]) => {
                     setSettings(prev => ({ ...prev, playbackSpeed: value }));
-                    // ✅ CẬP NHẬT NGAY CHO AUDIO ĐANG PHÁT
                     if (audioRef.current) {
                       audioRef.current.playbackRate = value;
                     }
-                    console.log(`🎵 Speed changed to ${value}x`);
                   }}
                   min={0.5}
                   max={2.0}
                   step={0.1}
-                  // ✅ BỎ DISABLED - CHO PHÉP THAY ĐỔI KHI ĐANG PHÁT
-                  className={`w-full ${isAutoPlaying ? 'opacity-90' : ''}`}
+                  className="w-full"
                 />
                 <div className="flex justify-between text-xs text-gray-500">
                   <span>0.5x</span>
@@ -811,7 +1020,7 @@ export default function ListenView({
                 </div>
               </div>
 
-              {/* Real-time feedback khi đang phát */}
+              {/* Real-time feedback */}
               {isAutoPlaying && (
                 <div className="text-xs bg-purple-50 p-2 rounded border-l-4 border-purple-300">
                   <div className="font-medium text-purple-700 mb-1">⚡ Cài đặt hiện tại:</div>
@@ -825,7 +1034,7 @@ export default function ListenView({
             </CardContent>
           </Card>
 
-          {/* Manual Navigation */}
+          {/* Manual Navigation - Desktop */}
           <Card>
             <CardContent className="p-4 space-y-3">
               <h3 className="font-medium text-sm">Điều khiển thủ công</h3>
@@ -851,13 +1060,7 @@ export default function ListenView({
                   </div>
                 </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={skipToNext}
-                  // ✅ CHO PHÉP SKIP KHI ĐANG PHÁT
-                  className="h-8 px-3"
-                >
+                <Button variant="outline" size="sm" onClick={skipToNext} className="h-8 px-3">
                   Sau
                   <SkipForward className="h-4 w-4 ml-1" />
                 </Button>
@@ -930,13 +1133,13 @@ export default function ListenView({
       {pagination.pages > 1 && (
         <Card>
           <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <span className="text-xs sm:text-sm text-gray-600 text-center sm:text-left">
                 Trang {currentPage}/{pagination.pages} • {pagination.total} từ
                 {selectedDate !== 'all' && <span className="text-blue-600 ml-1">(đã lọc)</span>}
               </span>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 justify-center sm:justify-end">
                 <Button
                   variant="outline"
                   size="sm"
@@ -949,6 +1152,7 @@ export default function ListenView({
                   className="h-8 px-3"
                 >
                   <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-1">Trước</span>
                 </Button>
 
                 <Button
@@ -962,6 +1166,7 @@ export default function ListenView({
                   disabled={currentPage === pagination.pages || isAutoPlaying}
                   className="h-8 px-3"
                 >
+                  <span className="hidden sm:inline mr-1">Sau</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
