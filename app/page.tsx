@@ -46,7 +46,7 @@ export default function Home() {
       title: 'Tạo Grammar',
       description: 'Phân tích cấu trúc ngữ pháp với AI',
       color: 'from-orange-500 to-orange-600',
-      path: '/create-grammar',
+      path: '/grammar',
     },
     {
       id: 'grammar-list',
