@@ -69,7 +69,7 @@ export default function Home() {
       {/* Background Image */}
       <div className="absolute inset-0 z-0">
         <Image
-          src="https://res.cloudinary.com/dfizo8h6h/image/upload/v1749027208/duong_2_qdyrb1.jpg"
+          src="https://res.cloudinary.com/dfizo8h6h/image/upload/v1749281277/photo-1462258409682-731445253757_d9mxww.jpg"
           alt="Background"
           fill
           className="object-cover object-center"

@@ -106,7 +106,7 @@ export default function CreateGrammar() {
       <div className="fixed bottom-4 right-4 z-20">
         <div className="w-12 h-12 rounded-full overflow-hidden shadow-lg border-2 border-white backdrop-blur-sm bg-white/10 hover:scale-110 transition-transform duration-300 cursor-pointer">
           <Image
-            src="https://res.cloudinary.com/dfizo8h6h/image/upload/v1748938841/%C3%81nh_D%C6%B0%C6%A1ng_s_facebook_2023-4-17_story_1_nm0n4s.jpg"
+            src="https://res.cloudinary.com/dfizo8h6h/image/upload/v1749281277/photo-1462258409682-731445253757_d9mxww.jpg"
             alt="Avatar"
             width={48}
             height={48}
@@ -146,7 +146,10 @@ export default function CreateGrammar() {
         {(error || result) && (
           <div className="mb-4 space-y-2">
             {error && (
-              <Alert variant="destructive" className="py-2 shadow-md border-0 bg-red-50/80 backdrop-blur-sm">
+              <Alert
+                variant="destructive"
+                className="py-2 shadow-md border-0 bg-red-50/80 backdrop-blur-sm"
+              >
                 <XCircle className="h-4 w-4" />
                 <AlertDescription className="text-sm font-medium">{error}</AlertDescription>
               </Alert>
@@ -215,9 +218,11 @@ export default function CreateGrammar() {
             <Card className="shadow-lg border-0 bg-white/70 backdrop-blur-md flex-1">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center text-base md:text-lg font-semibold">
-                  <div className={`p-2 rounded-lg mr-3 ${
-                    inputMode === 'single' ? 'bg-indigo-100' : 'bg-purple-100'
-                  }`}>
+                  <div
+                    className={`p-2 rounded-lg mr-3 ${
+                      inputMode === 'single' ? 'bg-indigo-100' : 'bg-purple-100'
+                    }`}
+                  >
                     {inputMode === 'single' ? (
                       <Plus className="h-4 w-4 text-indigo-600" />
                     ) : (
@@ -248,7 +253,8 @@ export default function CreateGrammar() {
                         disabled={isProcessing}
                       />
                       <div className="text-xs text-gray-600 bg-indigo-50/50 p-2 rounded">
-                        💡 Nhập cấu trúc ngữ pháp: have someone do, make someone do, get someone to do...
+                        💡 Nhập cấu trúc ngữ pháp: have someone do, make someone do, get someone to
+                        do...
                       </div>
                     </div>
 
@@ -290,16 +296,22 @@ let someone do something"
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
                         <div className="text-gray-600 bg-purple-50/50 p-2 rounded flex items-center gap-1">
                           <FileText className="h-3 w-3 text-purple-500" />
-                          <span className="hidden sm:inline">Mỗi cấu trúc một dòng. Tối đa 10 cấu trúc.</span>
-                          <span className="sm:hidden">Tối đa 10 cấu trúc, mỗi dòng một cấu trúc</span>
+                          <span className="hidden sm:inline">
+                            Mỗi cấu trúc một dòng. Tối đa 10 cấu trúc.
+                          </span>
+                          <span className="sm:hidden">
+                            Tối đa 10 cấu trúc, mỗi dòng một cấu trúc
+                          </span>
                         </div>
 
                         {bulkText.trim() && (
-                          <div className={`font-medium p-2 rounded flex items-center gap-1 ${
-                            grammarCount > 10
-                              ? 'text-red-600 bg-red-50/50'
-                              : 'text-indigo-600 bg-indigo-50/50'
-                          }`}>
+                          <div
+                            className={`font-medium p-2 rounded flex items-center gap-1 ${
+                              grammarCount > 10
+                                ? 'text-red-600 bg-red-50/50'
+                                : 'text-indigo-600 bg-indigo-50/50'
+                            }`}
+                          >
                             <TrendingUp className="h-3 w-3" />
                             Số cấu trúc: {grammarCount} {grammarCount > 10 && '(Quá giới hạn!)'}
                           </div>
@@ -315,7 +327,9 @@ let someone do something"
                       {isProcessing ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          <span className="hidden sm:inline">Đang phân tích {grammarCount} cấu trúc...</span>
+                          <span className="hidden sm:inline">
+                            Đang phân tích {grammarCount} cấu trúc...
+                          </span>
                           <span className="sm:hidden">Phân tích {grammarCount} cấu trúc...</span>
                         </>
                       ) : grammarCount > 10 ? (
@@ -327,7 +341,9 @@ let someone do something"
                       ) : (
                         <>
                           <Search className="mr-2 h-4 w-4" />
-                          <span className="hidden sm:inline">Phân tích {grammarCount} cấu trúc với AI</span>
+                          <span className="hidden sm:inline">
+                            Phân tích {grammarCount} cấu trúc với AI
+                          </span>
                           <span className="sm:hidden">Phân tích {grammarCount} cấu trúc</span>
                         </>
                       )}
@@ -353,7 +369,10 @@ let someone do something"
                       </span>
                     </div>
                     <p className="text-sm text-orange-700">
-                      🤖 <span className="hidden sm:inline">Đang tạo cấu trúc, ví dụ và phân loại</span>
+                      🤖{' '}
+                      <span className="hidden sm:inline">
+                        Đang tạo cấu trúc, ví dụ và phân loại
+                      </span>
                       <span className="sm:hidden">Tạo cấu trúc và ví dụ</span>
                     </p>
                     <div className="w-full h-1 bg-orange-200 rounded-full overflow-hidden">

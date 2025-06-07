@@ -136,7 +136,7 @@ export default function CreateNewWord() {
         <div className="relative animate-bounce">
           <div className="w-24 h-24 rounded-full overflow-hidden shadow-xl border-3 border-white hover:scale-110 transition-transform cursor-pointer">
             <Image
-              src="https://res.cloudinary.com/dfizo8h6h/image/upload/v1748938841/%C3%81nh_D%C6%B0%C6%A1ng_s_facebook_2023-4-17_story_1_nm0n4s.jpg"
+              src="https://res.cloudinary.com/dfizo8h6h/image/upload/v1749281277/photo-1462258409682-731445253757_d9mxww.jpg"
               alt="Avatar"
               width={96}
               height={96}
