@@ -1,294 +1,367 @@
 import { NextRequest, NextResponse } from 'next/server';
-const { DatabaseManager } = require('@/lib/database');
+import { DatabaseManager, WordData, DateFilterQuery } from '@/lib/database';
+import { AuthMiddleware, AuthenticatedUser } from '@/lib/auth';
 
-// TypeScript interfaces for better type safety
-interface SearchParams {
-  limit: number;
-  page: number;
-  search: string | null;
-  dateFilter: string | null;
-  specificDate: string | null;
-}
-
-interface DateQuery {
-  createdAt?: {
-    $gte: Date;
-    $lt: Date;
-  };
-}
-
-interface WordData {
-  _id: string;
-  word: string;
-  pronunciation: {
-    uk: string;
-    us: string;
-  };
-  audio: {
-    uk: string;
-    us: string;
-  };
-  level: string;
-  frequency: string;
-  meanings: Array<{
-    partOfSpeech: string;
-    definition: string;
-    examples: string[];
-    vietnamese?: string;
-  }>;
-  vietnamese: string;
-  createdAt: Date;
-  source?: string;
-}
-
-interface PaginationInfo {
+interface WordListParams {
   page: number;
   limit: number;
-  total: number;
-  pages: number;
+  search?: string;
+  date?: string;
+  specificDate?: string;
 }
 
-interface DateStatistics {
-  today: number;
-  week: number;
-  month: number;
-  total: number;
-  recentDays: Array<{
-    date: string;
-    count: number;
-  }>;
-}
-
-interface DatabaseResult {
+interface WordListResponse {
   words: WordData[];
-  pagination: PaginationInfo;
-}
-
-interface APIResponse {
-  success: boolean;
-  data: {
-    words: WordData[];
-    pagination: PaginationInfo;
-    dateStats: DateStatistics;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+  dateStats: {
+    today: number;
+    week: number;
+    month: number;
+    total: number;
+    recentDays: Array<{
+      date: string;
+      count: number;
+    }>;
+  };
+  userInfo: {
+    userId: string;
+    userName: string;
+    userEmail: string;
+    userRole: string;
+  };
+  meta: {
+    userRole: string;
+    dateFilter: string;
+    searchQuery: string;
+    hasLegacyWords: boolean;
   };
 }
 
-interface APIError {
-  error: string;
-}
-
-// GET handler for fetching words with enhanced date filtering and pagination
-export async function GET(request: NextRequest): Promise<NextResponse<APIResponse | APIError>> {
+export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
-    // Extract and validate search parameters
     const { searchParams } = new URL(request.url);
-    const limit: number = parseInt(searchParams.get('limit') || '20');
-    const page: number = parseInt(searchParams.get('page') || '1');
-    const search: string | null = searchParams.get('search');
-    const dateFilter: string | null = searchParams.get('date'); // 'all', 'today', 'week', 'month', 'specific'
-    const specificDate: string | null = searchParams.get('specificDate'); // Format: YYYY-MM-DD
 
-    console.log('📖 Fetching words with params:', {
-      page,
-      limit,
-      search: search ? `"${search}"` : null,
-      dateFilter,
-      specificDate,
-    });
+    // Parse parameters
+    const params: WordListParams = {
+      page: parseInt(searchParams.get('page') || '1'),
+      limit: parseInt(searchParams.get('limit') || '20'),
+      search: searchParams.get('search') || undefined,
+      date: searchParams.get('date') || 'all',
+      specificDate: searchParams.get('specificDate') || undefined,
+    };
+
+    console.log('📖 Word List GET request:', params);
 
     // Validate pagination parameters
-    if (page < 1 || limit < 1 || limit > 100) {
-      return NextResponse.json(
-        { error: 'Invalid pagination parameters. Page must be >= 1, limit must be 1-100' },
-        { status: 400 }
-      );
+    if (params.page < 1 || params.limit < 1 || params.limit > 100) {
+      return NextResponse.json({ error: 'Invalid pagination parameters' }, { status: 400 });
     }
 
-    // Validate date filter
-    const validDateFilters: string[] = ['all', 'today', 'week', 'month', 'specific'];
-    if (dateFilter && !validDateFilters.includes(dateFilter)) {
+    // ✅ Authenticate user (required)
+    let authenticatedUser: AuthenticatedUser;
+    try {
+      authenticatedUser = await AuthMiddleware.authenticateRequest(request);
+      console.log('🔐 Authenticated user:', {
+        name: authenticatedUser.userName,
+        role: authenticatedUser.userRole,
+      });
+    } catch (authError: any) {
       return NextResponse.json(
-        { error: 'Invalid date filter. Must be one of: all, today, week, month, specific' },
-        { status: 400 }
+        {
+          error: 'Cần đăng nhập để xem từ vựng',
+          details: authError.message,
+          code: 'AUTH_REQUIRED',
+        },
+        { status: 401 }
       );
-    }
-
-    // Validate specific date format if provided
-    if (dateFilter === 'specific' && specificDate) {
-      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-      if (!dateRegex.test(specificDate)) {
-        return NextResponse.json(
-          { error: 'Invalid specific date format. Must be YYYY-MM-DD' },
-          { status: 400 }
-        );
-      }
     }
 
     // Test database connection
-    const dbConnected: boolean = await DatabaseManager.testConnection();
+    const dbConnected = await DatabaseManager.testConnection();
     if (!dbConnected) {
-      console.error('❌ Database connection failed');
-      return NextResponse.json(
-        { error: 'Database connection failed' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
     }
 
-    // Build enhanced date filter query
-    let dateQuery: DateQuery = {};
+    // ✅ Build date filter query
+    const dateQuery: DateFilterQuery = {};
 
-    if (dateFilter && dateFilter !== 'all') {
-      const now: Date = new Date();
-      let startDate: Date | undefined, endDate: Date | undefined;
+    if (params.date && params.date !== 'all') {
+      const now = new Date();
 
-      switch (dateFilter) {
+      switch (params.date) {
         case 'today':
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-          endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-          console.log('📅 Today filter:', { startDate, endDate });
+          const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+          const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+          dateQuery.createdAt = { $gte: startOfToday, $lt: endOfToday };
           break;
 
         case 'week':
-          // Get start of week (Monday)
-          const dayOfWeek: number = now.getDay();
-          const diffToMonday: number = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-          startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday);
-          endDate = new Date(startDate.getTime() + 7 * 24 * 60 * 60 * 1000);
-          console.log('📅 Week filter:', { startDate, endDate });
+          const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          dateQuery.createdAt = { $gte: startOfWeek };
           break;
 
         case 'month':
-          startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-          endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-          console.log('📅 Month filter:', { startDate, endDate });
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          dateQuery.createdAt = { $gte: startOfMonth };
           break;
 
         case 'specific':
-          if (specificDate) {
-            const date: Date = new Date(specificDate + 'T00:00:00.000Z');
-            // Validate date is not in future
-            if (date > now) {
-              return NextResponse.json(
-                { error: 'Specific date cannot be in the future' },
-                { status: 400 }
-              );
-            }
-            startDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-            endDate = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
-            console.log('📅 Specific date filter:', { specificDate, startDate, endDate });
+          if (params.specificDate) {
+            const specificDate = new Date(params.specificDate);
+            const startOfDay = new Date(
+              specificDate.getFullYear(),
+              specificDate.getMonth(),
+              specificDate.getDate()
+            );
+            const endOfDay = new Date(
+              specificDate.getFullYear(),
+              specificDate.getMonth(),
+              specificDate.getDate() + 1
+            );
+            dateQuery.createdAt = { $gte: startOfDay, $lt: endOfDay };
           }
           break;
-
-        default:
-          console.warn('⚠️ Unknown date filter:', dateFilter);
-          break;
-      }
-
-      if (startDate && endDate) {
-        dateQuery.createdAt = {
-          $gte: startDate,
-          $lt: endDate,
-        };
       }
     }
 
-    let result: DatabaseResult;
+    console.log('🔍 Query filter:', {
+      dateQuery,
+      userId: authenticatedUser.userId,
+      userRole: authenticatedUser.userRole,
+    });
 
-    if (search && search.trim()) {
-      // Search words with date filter and pagination
-      console.log('🔍 Performing search with pagination...');
+    let words: WordData[] = [];
+    let pagination = {
+      page: params.page,
+      limit: params.limit,
+      total: 0,
+      pages: 0,
+    };
 
-      // Check if the search method with pagination exists
-      if (typeof DatabaseManager.searchWordsWithDateFilterPaginated === 'function') {
-        result = await DatabaseManager.searchWordsWithDateFilterPaginated(
-          search.trim(),
-          dateQuery,
-          page,
-          limit
-        );
-      } else {
-        // Fallback to regular search if paginated method doesn't exist
-        console.log('⚠️ Paginated search method not found, using fallback...');
-        const searchResults: WordData[] = await DatabaseManager.searchWordsWithDateFilter(
-          search.trim(),
-          dateQuery
-        );
+    // ✅ Fetch words with smart filtering
+    if (params.search && params.search.trim()) {
+      // Search with user-based filtering
+      words = await DatabaseManager.searchWordsForUser(
+        params.search.trim(),
+        authenticatedUser.userId,
+        authenticatedUser.userRole,
+        dateQuery
+      );
+      pagination = {
+        page: 1,
+        limit: words.length,
+        total: words.length,
+        pages: 1,
+      };
+    } else {
+      // Regular fetch with user-based filtering
+      const result = await DatabaseManager.getWordsForUser(
+        params.page,
+        params.limit,
+        authenticatedUser.userId,
+        authenticatedUser.userRole,
+        dateQuery
+      );
+      words = result.words;
+      pagination = result.pagination;
+    }
 
-        // Manual pagination for search results
-        const total: number = searchResults.length;
-        const pages: number = Math.ceil(total / limit);
-        const startIndex: number = (page - 1) * limit;
-        const endIndex: number = startIndex + limit;
-        const paginatedWords: WordData[] = searchResults.slice(startIndex, endIndex);
-
-        result = {
-          words: paginatedWords,
-          pagination: {
-            page,
-            limit,
-            total,
-            pages,
+    // ✅ Process words to handle missing addedBy field (for admin only)
+    const processedWords: WordData[] = words.map(word => {
+      if (!word.addedBy && authenticatedUser.userRole === 'admin') {
+        // Admin sees legacy words with default addedBy
+        return {
+          ...word,
+          addedBy: {
+            userId: '1',
+            userEmail: 'admin@newword.com',
+            userName: 'Admin',
+            addedAt: word.createdAt || new Date(),
           },
         };
       }
-    } else {
-      // Get words with pagination and date filter
-      console.log('📖 Fetching words with date filter...');
-      result = await DatabaseManager.getWordsWithDateFilter(page, limit, dateQuery);
-    }
-
-    // Add date statistics
-    console.log('📊 Fetching date statistics...');
-    const dateStats: DateStatistics = await DatabaseManager.getWordDateStatistics();
-
-    // Log success
-    console.log('✅ API Success:', {
-      wordsCount: result.words.length,
-      pagination: result.pagination,
-      hasDateStats: !!dateStats,
+      return word;
     });
 
-    const response: APIResponse = {
-      success: true,
-      data: {
-        ...result,
-        dateStats,
+    // ✅ Get date statistics with user-based filtering
+    const dateStats = await DatabaseManager.getDateStatisticsForUser(
+      authenticatedUser.userId,
+      authenticatedUser.userRole
+    );
+
+    // ✅ Check if there are legacy words (admin only)
+    let hasLegacyWords = false;
+    if (authenticatedUser.userRole === 'admin') {
+      const collection = await DatabaseManager.getWordsCollection();
+      const legacyWordsCount = await collection.countDocuments({
+        addedBy: { $exists: false },
+      });
+      hasLegacyWords = legacyWordsCount > 0;
+    }
+
+    // ✅ Prepare response
+    const response: WordListResponse = {
+      words: processedWords,
+      pagination,
+      dateStats,
+      userInfo: {
+        userId: authenticatedUser.userId,
+        userName: authenticatedUser.userName,
+        userEmail: authenticatedUser.userEmail,
+        userRole: authenticatedUser.userRole,
+      },
+      meta: {
+        userRole: authenticatedUser.userRole,
+        dateFilter: params.date || 'all',
+        searchQuery: params.search || '',
+        hasLegacyWords,
       },
     };
 
-    return NextResponse.json(response);
-  } catch (error: unknown) {
-    // Enhanced error handling
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    const errorStack = error instanceof Error ? error.stack : 'No stack trace available';
-
-    console.error('❌ GET API Error:', {
-      message: errorMessage,
-      stack: errorStack,
-      timestamp: new Date().toISOString(),
+    console.log('✅ Word list response:', {
+      wordsCount: words.length,
+      userRole: authenticatedUser.userRole,
+      userName: authenticatedUser.userName,
+      dateFilter: params.date,
+      hasLegacyWords,
     });
 
-    // Don't expose internal error details in production
-    const isProduction = process.env.NODE_ENV === 'production';
-    const publicErrorMessage = isProduction
-      ? 'Internal server error occurred'
-      : `Internal server error: ${errorMessage}`;
+    return NextResponse.json({
+      success: true,
+      data: response,
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ Word List API Error:', error);
 
-    return NextResponse.json(
-      { error: publicErrorMessage },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: `Internal server error: ${errorMessage}` }, { status: 500 });
   }
 }
 
-// Helper function to validate date string
-function isValidDateString(dateString: string): boolean {
-  const regex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!regex.test(dateString)) return false;
+// ✅ DELETE handler with smart permission check
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  try {
+    // ✅ Authenticate user
+    let authenticatedUser: AuthenticatedUser;
+    try {
+      authenticatedUser = await AuthMiddleware.authenticateRequest(request);
+    } catch (authError: any) {
+      return NextResponse.json(
+        {
+          error: 'Unauthorized',
+          details: authError.message,
+        },
+        { status: 401 }
+      );
+    }
 
-  const date = new Date(dateString);
-  return date instanceof Date && !isNaN(date.getTime());
+    const { searchParams } = new URL(request.url);
+    const word = searchParams.get('word');
+
+    if (!word) {
+      return NextResponse.json({ error: 'Word parameter is required' }, { status: 400 });
+    }
+
+    console.log('🗑️ DELETE word request:', {
+      word,
+      user: authenticatedUser.userName,
+      role: authenticatedUser.userRole,
+    });
+
+    // Test database connection
+    const dbConnected = await DatabaseManager.testConnection();
+    if (!dbConnected) {
+      return NextResponse.json({ error: 'Database connection failed' }, { status: 500 });
+    }
+
+    // Get collection
+    const collection = await DatabaseManager.getWordsCollection();
+
+    // Find the word first to check ownership
+    const existingWord = await collection.findOne({
+      word: { $regex: new RegExp(`^${word}$`, 'i') },
+    });
+
+    if (!existingWord) {
+      return NextResponse.json({ error: 'Word not found' }, { status: 404 });
+    }
+
+    // ✅ Smart permission check
+    let canDelete = false;
+    let deleteReason = '';
+
+    if (authenticatedUser.userRole === 'admin') {
+      // Admin can delete any word (including legacy words)
+      canDelete = true;
+      deleteReason = 'Admin privileges';
+      console.log('🔐 Admin delete access granted');
+    } else {
+      // Regular user can only delete their own words
+      if (existingWord.addedBy?.userId === authenticatedUser.userId) {
+        canDelete = true;
+        deleteReason = 'Word owner';
+        console.log('✅ User delete access granted (owner)');
+      } else {
+        canDelete = false;
+        deleteReason = 'Not word owner';
+        console.log('❌ User delete access denied (not owner)');
+      }
+    }
+
+    if (!canDelete) {
+      return NextResponse.json(
+        {
+          error: 'Bạn chỉ có thể xóa từ do mình thêm vào',
+          details: `Access denied: ${deleteReason}`,
+          wordOwner: existingWord.addedBy?.userName || 'Admin',
+          currentUser: authenticatedUser.userName,
+        },
+        { status: 403 }
+      );
+    }
+
+    // Delete the word
+    const result = await collection.deleteOne({
+      word: { $regex: new RegExp(`^${word}$`, 'i') },
+    });
+
+    if (result.deletedCount === 0) {
+      return NextResponse.json({ error: 'Failed to delete word' }, { status: 500 });
+    }
+
+    console.log('✅ Word deleted successfully:', {
+      word,
+      deletedBy: authenticatedUser.userName,
+      reason: deleteReason,
+      originalOwner: existingWord.addedBy?.userName || 'Legacy/Admin',
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: `Word "${word}" deleted successfully`,
+      deletedBy: {
+        userId: authenticatedUser.userId,
+        userName: authenticatedUser.userName,
+        userRole: authenticatedUser.userRole,
+      },
+      originalOwner: {
+        userId: existingWord.addedBy?.userId || '1',
+        userName: existingWord.addedBy?.userName || 'Admin',
+      },
+      accessReason: deleteReason,
+    });
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('❌ DELETE API Error:', error);
+
+    return NextResponse.json({ error: `Internal server error: ${errorMessage}` }, { status: 500 });
+  }
 }
 
-// Export types for use in other files
-export type { WordData, PaginationInfo, DateStatistics, APIResponse, APIError };
+// Export types
+export type { WordListParams, WordListResponse };

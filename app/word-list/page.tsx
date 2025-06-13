@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,11 @@ import {
   Target,
   Filter,
   CalendarDays,
+  Shield,
+  User,
+  Info,
+  Crown,
+  UserCircle,
 } from 'lucide-react';
 
 // Import các component con
@@ -55,6 +60,12 @@ interface WordData {
   }>;
   vietnamese: string;
   createdAt: string;
+  addedBy?: {
+    userId: string;
+    userEmail: string;
+    userName: string;
+    addedAt: string;
+  };
 }
 
 interface DateStats {
@@ -68,6 +79,13 @@ interface DateStats {
   }>;
 }
 
+interface UserInfo {
+  userId: string;
+  userName: string;
+  userEmail: string;
+  userRole: string;
+}
+
 export default function WordList() {
   const [viewMode, setViewMode] = useState<'grid' | 'flashcard' | 'study' | 'listen'>('grid');
   const [words, setWords] = useState<WordData[]>([]);
@@ -77,6 +95,7 @@ export default function WordList() {
   const [selectedDate, setSelectedDate] = useState('all');
   const [specificDate, setSpecificDate] = useState('');
   const [dateStats, setDateStats] = useState<DateStats | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -87,12 +106,66 @@ export default function WordList() {
 
   const router = useRouter();
 
+  // Get auth token
+  const getAuthToken = () => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('authToken');
+    }
+    return null;
+  };
+
+  // ✅ getUserBadge function
+  const getUserBadge = (addedBy?: WordData['addedBy']) => {
+    if (!addedBy) {
+      // Legacy word (no addedBy info)
+      return {
+        icon: Crown,
+        color: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+        label: 'Legacy',
+      };
+    }
+
+    // Check if current user is admin
+    const isCurrentUserAdmin = userInfo?.userRole === 'admin';
+    const isCurrentUser = userInfo?.userId === addedBy.userId;
+
+    if (isCurrentUser) {
+      return {
+        icon: User,
+        color: 'bg-blue-100 text-blue-700 border-blue-200',
+        label: 'Của tôi',
+      };
+    }
+
+    if (addedBy.userName === 'Admin' || addedBy.userId === '1') {
+      return {
+        icon: Shield,
+        color: 'bg-purple-100 text-purple-700 border-purple-200',
+        label: 'Admin',
+      };
+    }
+
+    // Other user's word
+    return {
+      icon: UserCircle,
+      color: 'bg-gray-100 text-gray-700 border-gray-200',
+      label:
+        addedBy.userName.length > 8 ? addedBy.userName.substring(0, 8) + '...' : addedBy.userName,
+    };
+  };
+
   // Fetch words function
   const fetchWords = async (page = 1, search = '') => {
     setLoading(true);
     setError('');
 
     try {
+      const token = getAuthToken();
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+
       const params = new URLSearchParams({
         page: page.toString(),
         limit: '20',
@@ -110,19 +183,34 @@ export default function WordList() {
         }
       }
 
-      const response = await fetch(`/api/words/list?${params}`);
+      const response = await fetch(`/api/words/list?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('authToken');
+          router.push('/login');
+          return;
+        }
         throw new Error(data.error || 'Có lỗi xảy ra');
       }
 
       setWords(data.data.words);
       setPagination(data.data.pagination);
+      setDateStats(data.data.dateStats);
+      setUserInfo(data.data.userInfo);
 
-      if (data.data.dateStats) {
-        setDateStats(data.data.dateStats);
-      }
+      console.log('📊 Fetched words:', {
+        count: data.data.words.length,
+        userRole: data.data.userInfo.userRole,
+        hasLegacyWords: data.data.meta.hasLegacyWords,
+      });
     } catch (error: any) {
       console.error('Error fetching words:', error);
       setError(error.message || 'Có lỗi xảy ra khi tải từ vựng');
@@ -215,10 +303,45 @@ export default function WordList() {
         <div className="container mx-auto p-3 max-w-7xl">
           {/* Header */}
           <div className="mb-4">
-            <Button variant="ghost" onClick={() => router.back()} className="mb-3" size="sm">
-              <ArrowLeft className="mr-1 h-3 w-3" />
-              Quay lại
-            </Button>
+            <div className="flex items-center justify-between mb-3">
+              <Button variant="ghost" onClick={() => router.back()} size="sm">
+                <ArrowLeft className="mr-1 h-3 w-3" />
+                Quay lại
+              </Button>
+
+              {/* User Info */}
+              {userInfo && (
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant={userInfo.userRole === 'admin' ? 'default' : 'secondary'}
+                    className="text-xs"
+                  >
+                    {userInfo.userRole === 'admin' ? (
+                      <>
+                        <Shield className="h-3 w-3 mr-1" />
+                        Admin
+                      </>
+                    ) : (
+                      <>
+                        <User className="h-3 w-3 mr-1" />
+                        {userInfo.userName}
+                      </>
+                    )}
+                  </Badge>
+                </div>
+              )}
+            </div>
+
+            {/* Admin Info Alert */}
+            {userInfo?.userRole === 'admin' && (
+              <Alert className="mb-4 border-blue-200 bg-blue-50">
+                <Info className="h-4 w-4" />
+                <AlertDescription className="text-sm">
+                  <strong>Quyền Admin:</strong> Bạn có thể xem tất cả từ vựng (bao gồm từ legacy và
+                  từ của tất cả users). Bạn cũng có thể xóa bất kỳ từ nào.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {/* Date Statistics Cards */}
             {dateStats && (
@@ -244,7 +367,9 @@ export default function WordList() {
                 <Card className="bg-gradient-to-r from-indigo-50 to-indigo-100 border-indigo-200">
                   <CardContent className="p-2 text-center">
                     <div className="text-lg font-bold text-indigo-600">{dateStats.total}</div>
-                    <div className="text-xs text-indigo-700">Tổng cộng</div>
+                    <div className="text-xs text-indigo-700">
+                      {userInfo?.userRole === 'admin' ? 'Tổng (Hệ thống)' : 'Tổng (Của tôi)'}
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -259,7 +384,9 @@ export default function WordList() {
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Tìm từ..."
+                    placeholder={
+                      userInfo?.userRole === 'admin' ? 'Tìm tất cả từ...' : 'Tìm từ của tôi...'
+                    }
                     className="h-8 text-sm"
                   />
                   <Button type="submit" disabled={loading} size="sm" className="h-8 px-3">
@@ -357,9 +484,17 @@ export default function WordList() {
                       Nghe
                     </Button>
                   </div>
-                  <Badge variant="secondary" className="text-xs h-6">
-                    {pagination.total} từ • 🇺🇸 US Audio
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs h-6">
+                      {pagination.total} từ • 🇺🇸 US Audio
+                    </Badge>
+                    {userInfo?.userRole === 'admin' && (
+                      <Badge variant="outline" className="text-xs h-6">
+                        <Shield className="h-2 w-2 mr-1" />
+                        Admin View
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -382,7 +517,9 @@ export default function WordList() {
               <CardContent className="text-center py-8">
                 <CalendarDays className="h-12 w-12 mx-auto text-gray-300 mb-4" />
                 <p className="text-gray-500 text-sm mb-2">
-                  Không có từ vựng nào
+                  {userInfo?.userRole === 'admin'
+                    ? 'Không có từ vựng nào trong hệ thống'
+                    : 'Bạn chưa có từ vựng nào'}
                   {selectedDate !== 'all' && (
                     <span className="block text-xs mt-1">trong khoảng thời gian được chọn</span>
                   )}
@@ -404,6 +541,9 @@ export default function WordList() {
                   getAudioUrl={getAudioUrl}
                   getPronunciation={getPronunciation}
                   formatDate={formatDate}
+                  getUserBadge={getUserBadge}
+                  isAuthenticated={!!userInfo}
+                  currentUserId={userInfo?.userId}
                 />
               )}
 
@@ -415,6 +555,9 @@ export default function WordList() {
                   onPageChange={handlePageChange}
                   getAudioUrl={getAudioUrl}
                   getPronunciation={getPronunciation}
+                  getUserBadge={getUserBadge}
+                  isAuthenticated={!!userInfo}
+                  currentUserId={userInfo?.userId}
                 />
               )}
 
@@ -426,6 +569,9 @@ export default function WordList() {
                   onPageChange={handlePageChange}
                   getAudioUrl={getAudioUrl}
                   getPronunciation={getPronunciation}
+                  getUserBadge={getUserBadge}
+                  isAuthenticated={!!userInfo}
+                  currentUserId={userInfo?.userId}
                 />
               )}
 
@@ -438,6 +584,9 @@ export default function WordList() {
                   onPageChange={handlePageChange}
                   getAudioUrl={getAudioUrl}
                   getPronunciation={getPronunciation}
+                  getUserBadge={getUserBadge}
+                  isAuthenticated={!!userInfo}
+                  currentUserId={userInfo?.userId}
                 />
               )}
             </>

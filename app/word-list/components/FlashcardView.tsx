@@ -1,14 +1,30 @@
+'use client';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Volume2, VolumeX, ChevronLeft, ChevronRight, RotateCcw, Eye, EyeOff } from 'lucide-react';
+// import { Progress } from '@/components/ui/progress';
+import {
+  Volume2,
+  VolumeX,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  Shuffle,
+  Calendar,
+} from 'lucide-react';
 
 interface WordData {
   _id: string;
   word: string;
-  pronunciation: { uk: string; us: string };
-  audio: { uk: string; us: string };
+  pronunciation: {
+    uk: string;
+    us: string;
+  };
+  audio: {
+    uk: string;
+    us: string;
+  };
   level: string;
   frequency: string;
   meanings: Array<{
@@ -19,6 +35,12 @@ interface WordData {
   }>;
   vietnamese: string;
   createdAt: string;
+  addedBy: {
+    userId: string;
+    userEmail: string;
+    userName: string;
+    addedAt: string;
+  };
 }
 
 interface FlashcardViewProps {
@@ -30,364 +52,272 @@ interface FlashcardViewProps {
     pages: number;
   };
   selectedDate: string;
-  onPageChange: (page: number) => void;
+  onPageChange: (page: number) => Promise<void>;
   getAudioUrl: (word: WordData) => string;
   getPronunciation: (word: WordData) => string;
+  getUserBadge: (addedBy: WordData['addedBy']) => {
+    icon: React.ComponentType<any>;
+    color: string;
+    label: string;
+  };
+  isAuthenticated: boolean;
+  currentUserId?: string;
 }
 
 export default function FlashcardView({
   words,
-  pagination,
-  selectedDate,
-  onPageChange,
   getAudioUrl,
   getPronunciation,
+  getUserBadge,
 }: FlashcardViewProps) {
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [shuffledWords, setShuffledWords] = useState<WordData[]>([]);
+  const [playingAudio, setPlayingAudio] = useState(false);
 
-  // Hàm phát audio cho từng loại (UK/US)
-  const playAudio = (word: WordData, type: 'uk' | 'us') => {
-    const audioUrl = word.audio[type];
-    if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio.play().catch(console.error);
-    }
+  useEffect(() => {
+    setShuffledWords([...words]);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+  }, [words]);
+
+  const currentWord = shuffledWords[currentIndex];
+  const progress = shuffledWords.length > 0 ? ((currentIndex + 1) / shuffledWords.length) * 100 : 0;
+
+  const shuffleCards = () => {
+    const shuffled = [...shuffledWords].sort(() => Math.random() - 0.5);
+    setShuffledWords(shuffled);
+    setCurrentIndex(0);
+    setIsFlipped(false);
   };
 
   const nextCard = () => {
-    setShowAnswer(false);
-    if (currentCardIndex < words.length - 1) {
-      setCurrentCardIndex(prev => prev + 1);
-    } else {
-      if (pagination.page < pagination.pages) {
-        onPageChange(pagination.page + 1);
-      } else {
-        setCurrentCardIndex(0);
-      }
+    if (currentIndex < shuffledWords.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setIsFlipped(false);
     }
   };
 
   const prevCard = () => {
-    setShowAnswer(false);
-    if (currentCardIndex > 0) {
-      setCurrentCardIndex(prev => prev - 1);
-    } else {
-      if (pagination.page > 1) {
-        onPageChange(pagination.page - 1);
-        setCurrentCardIndex(19);
-      } else {
-        setCurrentCardIndex(words.length - 1);
-      }
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setIsFlipped(false);
     }
   };
 
-  const flipCard = () => {
-    setShowAnswer(!showAnswer);
+  const resetCards = () => {
+    setCurrentIndex(0);
+    setIsFlipped(false);
   };
 
-  const resetFlashcards = () => {
-    setCurrentCardIndex(0);
-    setShowAnswer(false);
-  };
+  const playAudio = async () => {
+    if (!currentWord) return;
+    const audioUrl = getAudioUrl(currentWord);
+    if (!audioUrl) return;
 
-  const goToFlashcardPage = (page: number) => {
-    onPageChange(page);
-  };
+    try {
+      setPlayingAudio(true);
+      const audio = new Audio(audioUrl);
 
-  const getGlobalCardPosition = () => {
-    return (pagination.page - 1) * 20 + currentCardIndex + 1;
-  };
+      audio.onended = () => setPlayingAudio(false);
+      audio.onerror = () => setPlayingAudio(false);
 
-  const getTotalCards = () => {
-    return pagination.total;
-  };
-
-  // Adjust indices when words change
-  useEffect(() => {
-    if (words.length > 0) {
-      if (currentCardIndex >= words.length) {
-        setCurrentCardIndex(words.length - 1);
-      }
+      await audio.play();
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      setPlayingAudio(false);
     }
-  }, [words, currentCardIndex]);
+  };
 
-  if (words.length === 0) return null;
+  if (!currentWord) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <p className="text-gray-500">Không có thẻ từ nào</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
-  const currentWord = words[currentCardIndex];
+  const userBadge = getUserBadge(currentWord.addedBy);
+  const IconComponent = userBadge.icon;
 
   return (
-    <div className="space-y-3 max-w-2xl mx-auto">
-      {/* Enhanced Controls with Global Position */}
+    <div className="space-y-4 max-w-2xl mx-auto">
+      {/* Progress and Controls */}
       <Card>
-        <CardContent className="p-3 space-y-2">
-          {/* Global Position & Page Info */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm">
-              <span className="font-medium text-blue-600">
-                Từ {getGlobalCardPosition()}/{getTotalCards()}
-              </span>
-              <span className="text-gray-500 ml-2">
-                (Trang {pagination.page}/{pagination.pages})
-              </span>
-              {selectedDate !== 'all' && (
-                <span className="text-blue-600 ml-1 text-xs">(đã lọc)</span>
-              )}
-            </div>
-            <div className="flex gap-1">
-              <Button variant="outline" size="sm" onClick={resetFlashcards} className="h-7 px-2">
-                <RotateCcw className="h-3 w-3" />
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-medium">
+              Thẻ {currentIndex + 1} / {shuffledWords.length}
+            </span>
+            <div className="flex gap-2">
+              <Button onClick={shuffleCards} variant="outline" size="sm">
+                <Shuffle className="h-3 w-3 mr-1" />
+                Xáo trộn
               </Button>
-              <Button variant="outline" size="sm" onClick={flipCard} className="h-7 px-2">
-                {showAnswer ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+              <Button onClick={resetCards} variant="outline" size="sm">
+                <RotateCcw className="h-3 w-3 mr-1" />
+                Bắt đầu lại
               </Button>
             </div>
           </div>
-
-          {/* Page Jump Controls */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-center gap-2 pt-2 border-t">
-              <span className="text-xs text-gray-600">Nhảy tới trang:</span>
-              <div className="flex gap-1">
-                {Array.from({ length: Math.min(pagination.pages, 5) }, (_, i) => {
-                  const pageNum = i + 1;
-                  return (
-                    <Button
-                      key={pageNum}
-                      variant={pagination.page === pageNum ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => goToFlashcardPage(pageNum)}
-                      className="h-6 w-6 p-0 text-xs"
-                    >
-                      {pageNum}
-                    </Button>
-                  );
-                })}
-                {pagination.pages > 5 && (
-                  <>
-                    <span className="text-xs text-gray-400">...</span>
-                    <Button
-                      variant={pagination.page === pagination.pages ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => goToFlashcardPage(pagination.pages)}
-                      className="h-6 w-8 p-0 text-xs"
-                    >
-                      {pagination.pages}
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+          {/* <Progress value={progress} className="w-full h-2" /> */}
         </CardContent>
       </Card>
 
       {/* Flashcard */}
-      <Card className="cursor-pointer hover:shadow-lg transition-all" onClick={flipCard}>
-        <CardContent className="p-6 text-center min-h-[300px] flex flex-col justify-center">
-          {!showAnswer ? (
-            // Front - Word
-            <div className="space-y-4">
-              <h2 className="text-3xl font-bold text-blue-600">{currentWord.word}</h2>
-
-              {/* Pronunciation với cả UK và US */}
-              <div className="space-y-2">
-                {currentWord.pronunciation.uk && (
-                  <div className="text-lg text-gray-600">🇬🇧 /{currentWord.pronunciation.uk}/</div>
-                )}
-                {currentWord.pronunciation.us && (
-                  <div className="text-lg text-gray-600">🇺🇸 /{currentWord.pronunciation.us}/</div>
-                )}
+      <div className="relative perspective-1000">
+        <Card
+          className={`
+            cursor-pointer transition-all duration-500 transform-style-preserve-3d
+            ${isFlipped ? 'rotate-y-180' : ''}
+            h-80 relative
+          `}
+          onClick={() => setIsFlipped(!isFlipped)}
+        >
+          {/* Front of card (Word) */}
+          <div
+            className={`
+            absolute inset-0 backface-hidden
+            ${isFlipped ? 'rotate-y-180' : ''}
+          `}
+          >
+            <CardContent className="h-full flex flex-col justify-center items-center text-center p-6">
+              {/* User badge */}
+              <div className="absolute top-4 right-4 flex items-center gap-1">
+                <IconComponent className="h-3 w-3" />
+                <span className={`text-xs px-2 py-1 rounded-full ${userBadge.color}`}>
+                  {userBadge.label}
+                </span>
               </div>
 
-              <div className="flex justify-center gap-2 flex-wrap">
-                {currentWord.level && (
-                  <Badge variant="secondary" className="text-sm">
-                    {currentWord.level}
-                  </Badge>
-                )}
-                {currentWord.frequency && (
-                  <Badge variant="outline" className="text-sm">
-                    {currentWord.frequency.split(' ')[0]}
-                  </Badge>
-                )}
-                <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700">
-                  Trang {pagination.page}
-                </Badge>
-              </div>
+              <div className="space-y-4">
+                <div className="flex items-center justify-center gap-3">
+                  <h1 className="text-4xl font-bold text-gray-800">{currentWord.word}</h1>
 
-              {/* Audio buttons cho cả UK và US */}
-              <div className="flex justify-center gap-3">
-                {/* UK Audio */}
-                {currentWord.audio.uk ? (
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     onClick={e => {
                       e.stopPropagation();
-                      playAudio(currentWord, 'uk');
+                      playAudio();
                     }}
-                    className="h-8 px-3 text-sm"
+                    disabled={playingAudio}
+                    className="h-10 w-10 p-0"
                   >
-                    <Volume2 className="mr-2 h-4 w-4" />
-                    🇬🇧 UK
+                    {playingAudio ? (
+                      <VolumeX className="h-5 w-5" />
+                    ) : (
+                      <Volume2 className="h-5 w-5" />
+                    )}
                   </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="h-8 px-3 text-sm opacity-50"
-                  >
-                    <VolumeX className="mr-2 h-4 w-4" />
-                    🇬🇧 UK
-                  </Button>
-                )}
+                </div>
 
-                {/* US Audio */}
-                {currentWord.audio.us ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={e => {
-                      e.stopPropagation();
-                      playAudio(currentWord, 'us');
-                    }}
-                    className="h-8 px-3 text-sm"
-                  >
-                    <Volume2 className="mr-2 h-4 w-4" />
-                    🇺🇸 US
-                  </Button>
-                ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled
-                    className="h-8 px-3 text-sm opacity-50"
-                  >
-                    <VolumeX className="mr-2 h-4 w-4" />
-                    🇺🇸 US
-                  </Button>
-                )}
+                <p className="text-lg text-gray-600">{getPronunciation(currentWord)}</p>
+
+                <div className="flex justify-center gap-2">
+                  {currentWord.level && <Badge variant="secondary">{currentWord.level}</Badge>}
+                  {currentWord.frequency && (
+                    <Badge variant="outline">{currentWord.frequency}</Badge>
+                  )}
+                </div>
+
+                <p className="text-sm text-gray-500 mt-4">Nhấn để xem nghĩa</p>
+              </div>
+            </CardContent>
+          </div>
+
+          {/* Back of card (Meaning) */}
+          <div
+            className={`
+            absolute inset-0 backface-hidden rotate-y-180
+            ${isFlipped ? 'rotate-y-0' : 'rotate-y-180'}
+          `}
+          >
+            <CardContent className="h-full flex flex-col justify-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50">
+              {/* User badge */}
+              <div className="absolute top-4 right-4 flex items-center gap-1">
+                <IconComponent className="h-3 w-3" />
+                <span className={`text-xs px-2 py-1 rounded-full ${userBadge.color}`}>
+                  {userBadge.label}
+                </span>
               </div>
 
-              <p className="text-gray-500 text-sm">Nhấn để xem nghĩa</p>
-            </div>
-          ) : (
-            // Back - Meaning
-            <div className="space-y-4">
-              <h2 className="text-2xl font-bold text-green-600">{currentWord.vietnamese}</h2>
+              <div className="space-y-4">
+                {/* Word again */}
+                <h2 className="text-2xl font-bold text-center text-gray-800">{currentWord.word}</h2>
 
-              <div className="space-y-3 text-left max-w-lg mx-auto">
-                {currentWord.meanings.slice(0, 2).map((meaning, idx) => (
-                  <div key={idx} className="border-l-4 border-green-200 pl-3">
-                    <Badge variant="outline" className="text-sm mb-2">
-                      {meaning.partOfSpeech}
-                    </Badge>
-                    <p className="text-sm text-gray-700 mb-2">{meaning.definition}</p>
-                    {meaning.vietnamese && (
-                      <p className="text-sm text-green-600 italic mb-2">→ {meaning.vietnamese}</p>
-                    )}
-                    {meaning.examples[0] && (
-                      <p className="text-sm text-gray-600 italic">"{meaning.examples[0]}"</p>
-                    )}
+                {/* Vietnamese translation */}
+                {currentWord.vietnamese && (
+                  <div className="bg-orange-100 p-3 rounded-lg">
+                    <p className="text-orange-700 font-medium text-center">
+                      🇻🇳 {currentWord.vietnamese}
+                    </p>
                   </div>
-                ))}
-                {currentWord.meanings.length > 2 && (
-                  <p className="text-sm text-gray-400 italic text-center">
-                    +{currentWord.meanings.length - 2} nghĩa khác...
-                  </p>
                 )}
+
+                {/* Meanings */}
+                <div className="space-y-3">
+                  {currentWord.meanings.slice(0, 3).map((meaning, idx) => (
+                    <div key={idx} className="bg-white p-3 rounded-lg shadow-sm">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge variant="secondary" className="text-xs">
+                          {meaning.partOfSpeech}
+                        </Badge>
+                      </div>
+
+                      <p className="text-sm text-gray-700 mb-1">{meaning.definition}</p>
+
+                      {meaning.vietnamese && (
+                        <p className="text-xs text-orange-600">→ {meaning.vietnamese}</p>
+                      )}
+
+                      {meaning.examples.length > 0 && (
+                        <p className="text-xs text-gray-600 italic mt-1">"{meaning.examples[0]}"</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-sm text-gray-500 text-center">Nhấn để xem từ</p>
+
+                {/* Date info */}
+                <div className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
+                  <Calendar className="h-3 w-3" />
+                  Thêm bởi {currentWord.addedBy.userName}
+                </div>
               </div>
+            </CardContent>
+          </div>
+        </Card>
+      </div>
 
-              {/* Audio buttons trong phần nghĩa */}
-              <div className="flex justify-center gap-3 pt-3 border-t">
-                {currentWord.audio.uk && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={e => {
-                      e.stopPropagation();
-                      playAudio(currentWord, 'uk');
-                    }}
-                    className="h-8 px-3 text-sm"
-                  >
-                    <Volume2 className="mr-2 h-4 w-4" />
-                    🇬🇧 UK
-                  </Button>
-                )}
-                {currentWord.audio.us && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={e => {
-                      e.stopPropagation();
-                      playAudio(currentWord, 'us');
-                    }}
-                    className="h-8 px-3 text-sm"
-                  >
-                    <Volume2 className="mr-2 h-4 w-4" />
-                    🇺🇸 US
-                  </Button>
-                )}
-              </div>
+      {/* Navigation */}
+      <div className="flex justify-center gap-4">
+        <Button onClick={prevCard} disabled={currentIndex === 0} variant="outline" size="lg">
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Trước
+        </Button>
 
-              <p className="text-gray-500 text-sm">Nhấn để xem từ</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        <Button
+          onClick={nextCard}
+          disabled={currentIndex === shuffledWords.length - 1}
+          variant="outline"
+          size="lg"
+        >
+          Sau
+          <ChevronRight className="h-4 w-4 ml-2" />
+        </Button>
+      </div>
 
-      {/* Enhanced Navigation */}
+      {/* Instructions */}
       <Card>
-        <CardContent className="p-3">
-          <div className="flex justify-between items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={prevCard}
-              disabled={words.length <= 1 && pagination.pages <= 1}
-              className="h-8 px-4"
-            >
-              <ChevronLeft className="mr-1 h-4 w-4" />
-              Trước
-            </Button>
-
-            <div className="text-center">
-              <div className="text-sm text-gray-600">
-                {currentCardIndex + 1}/{words.length} (trang này)
-              </div>
-              <div className="text-xs text-gray-400">
-                Còn {words.length - currentCardIndex - 1} từ
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={nextCard}
-              disabled={words.length <= 1 && pagination.pages <= 1}
-              className="h-8 px-4"
-            >
-              Sau
-              <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-
-          {/* Progress indicator */}
-          <div className="mt-3">
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${(getGlobalCardPosition() / getTotalCards()) * 100}%`,
-                }}
-              ></div>
-            </div>
-            <div className="text-center text-xs text-gray-500 mt-1">
-              Tiến độ: {Math.round((getGlobalCardPosition() / getTotalCards()) * 100)}%
-            </div>
-          </div>
+        <CardContent className="p-3 text-center">
+          <p className="text-sm text-gray-600">
+            💡 <strong>Hướng dẫn:</strong> Nhấn vào thẻ để lật, sử dụng nút điều hướng hoặc phím mũi
+            tên
+          </p>
         </CardContent>
       </Card>
     </div>

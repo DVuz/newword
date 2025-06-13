@@ -1,14 +1,34 @@
+'use client';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+// import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Volume2, VolumeX, ChevronLeft, ChevronRight, Target } from 'lucide-react';
+import {
+  Volume2,
+  VolumeX,
+  ChevronLeft,
+  ChevronRight,
+  RotateCcw,
+  CheckCircle,
+  XCircle,
+  Calendar,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 
 interface WordData {
   _id: string;
   word: string;
-  pronunciation: { uk: string; us: string };
-  audio: { uk: string; us: string };
+  pronunciation: {
+    uk: string;
+    us: string;
+  };
+  audio: {
+    uk: string;
+    us: string;
+  };
   level: string;
   frequency: string;
   meanings: Array<{
@@ -19,6 +39,12 @@ interface WordData {
   }>;
   vietnamese: string;
   createdAt: string;
+  addedBy: {
+    userId: string;
+    userEmail: string;
+    userName: string;
+    addedAt: string;
+  };
 }
 
 interface StudyViewProps {
@@ -30,220 +56,301 @@ interface StudyViewProps {
     pages: number;
   };
   selectedDate: string;
-  onPageChange: (page: number) => void;
+  onPageChange: (page: number) => Promise<void>;
   getAudioUrl: (word: WordData) => string;
   getPronunciation: (word: WordData) => string;
+  getUserBadge: (addedBy: WordData['addedBy']) => {
+    icon: React.ComponentType<any>;
+    color: string;
+    label: string;
+  };
+  isAuthenticated: boolean;
+  currentUserId?: string;
 }
 
 export default function StudyView({
   words,
   pagination,
-  selectedDate,
   onPageChange,
   getAudioUrl,
   getPronunciation,
+  getUserBadge,
+  isAuthenticated,
+  currentUserId,
 }: StudyViewProps) {
-  // Hàm phát audio cho từng loại (UK/US)
-  const playAudio = (word: WordData, type: 'uk' | 'us') => {
-    const audioUrl = word.audio[type];
-    if (audioUrl) {
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [showMeaning, setShowMeaning] = useState(false);
+  const [studiedWords, setStudiedWords] = useState<Set<string>>(new Set());
+  const [playingAudio, setPlayingAudio] = useState(false);
+
+  const currentWord = words[currentWordIndex];
+  const progress = ((currentWordIndex + 1) / words.length) * 100;
+
+  useEffect(() => {
+    setCurrentWordIndex(0);
+    setShowMeaning(false);
+    setStudiedWords(new Set());
+  }, [words]);
+
+  const playAudio = async () => {
+    if (!currentWord) return;
+    const audioUrl = getAudioUrl(currentWord);
+    if (!audioUrl) return;
+
+    try {
+      setPlayingAudio(true);
       const audio = new Audio(audioUrl);
-      audio.play().catch(console.error);
+
+      audio.onended = () => setPlayingAudio(false);
+      audio.onerror = () => setPlayingAudio(false);
+
+      await audio.play();
+    } catch (error) {
+      console.error('Error playing audio:', error);
+      setPlayingAudio(false);
     }
   };
 
+  const nextWord = () => {
+    if (currentWordIndex < words.length - 1) {
+      setCurrentWordIndex(currentWordIndex + 1);
+      setShowMeaning(false);
+    }
+  };
+
+  const prevWord = () => {
+    if (currentWordIndex > 0) {
+      setCurrentWordIndex(currentWordIndex - 1);
+      setShowMeaning(false);
+    }
+  };
+
+  const markAsStudied = (known: boolean) => {
+    const newStudiedWords = new Set(studiedWords);
+    if (known) {
+      newStudiedWords.add(currentWord._id);
+    } else {
+      newStudiedWords.delete(currentWord._id);
+    }
+    setStudiedWords(newStudiedWords);
+
+    // Auto move to next word after marking
+    setTimeout(() => {
+      if (currentWordIndex < words.length - 1) {
+        nextWord();
+      }
+    }, 500);
+  };
+
+  const resetStudy = () => {
+    setCurrentWordIndex(0);
+    setShowMeaning(false);
+    setStudiedWords(new Set());
+  };
+
+  if (!currentWord) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <p className="text-gray-500">Không có từ nào để học</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const userBadge = getUserBadge(currentWord.addedBy);
+  const IconComponent = userBadge.icon;
+  const isKnown = studiedWords.has(currentWord._id);
+
   return (
-    <div className="space-y-3">
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="p-3 text-center">
-          <p className="text-sm text-blue-700">
-            <Target className="h-4 w-4 inline mr-1" />
-            Chế độ học tập: Hover qua từ để xem chi tiết • 🇬🇧 UK & 🇺🇸 US Audio
-            {selectedDate !== 'all' && (
-              <span className="block text-xs mt-1 text-blue-600">
-                Đang hiển thị từ vựng đã lọc theo thời gian
+    <div className="space-y-4">
+      {/* Progress Bar */}
+      <Card>
+        {/* <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">
+              Tiến độ học: {currentWordIndex + 1} / {words.length}
+            </span>
+            <span className="text-sm text-gray-500">Đã học: {studiedWords.size} từ</span>
+          </div>
+          <Progress value={progress} className="w-full h-2" />
+        </CardContent> */}
+      </Card>
+
+      {/* Study Card */}
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader className="text-center pb-2">
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={prevWord}
+              disabled={currentWordIndex === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-2">
+              <IconComponent className="h-4 w-4" />
+              <span className={`text-sm px-2 py-1 rounded-full ${userBadge.color}`}>
+                {userBadge.label}
               </span>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={nextWord}
+              disabled={currentWordIndex === words.length - 1}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="text-center space-y-6">
+          {/* Word and Pronunciation */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-center gap-3">
+              <h1 className="text-4xl font-bold text-gray-800">{currentWord.word}</h1>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={playAudio}
+                disabled={playingAudio}
+                className="h-10 w-10 p-0"
+              >
+                {playingAudio ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
+              </Button>
+            </div>
+
+            <p className="text-lg text-gray-600">{getPronunciation(currentWord)}</p>
+
+            {/* Level and Frequency */}
+            <div className="flex justify-center gap-2">
+              {currentWord.level && <Badge variant="secondary">{currentWord.level}</Badge>}
+              {currentWord.frequency && <Badge variant="outline">{currentWord.frequency}</Badge>}
+            </div>
+          </div>
+
+          {/* Show/Hide Meaning Button */}
+          <Button
+            onClick={() => setShowMeaning(!showMeaning)}
+            variant="outline"
+            size="lg"
+            className="w-full max-w-xs"
+          >
+            {showMeaning ? (
+              <>
+                <EyeOff className="mr-2 h-4 w-4" />
+                Ẩn nghĩa
+              </>
+            ) : (
+              <>
+                <Eye className="mr-2 h-4 w-4" />
+                Hiện nghĩa
+              </>
             )}
-          </p>
+          </Button>
+
+          {/* Meanings */}
+          {showMeaning && (
+            <div className="space-y-4 text-left">
+              {/* Vietnamese translation */}
+              {currentWord.vietnamese && (
+                <div className="bg-orange-50 p-4 rounded-lg">
+                  <p className="text-orange-700 font-medium">🇻🇳 {currentWord.vietnamese}</p>
+                </div>
+              )}
+
+              {/* Detailed meanings */}
+              <div className="space-y-3">
+                {currentWord.meanings.map((meaning, idx) => (
+                  <div key={idx} className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {meaning.partOfSpeech}
+                      </Badge>
+                    </div>
+
+                    <p className="text-gray-700 mb-2">{meaning.definition}</p>
+
+                    {meaning.vietnamese && (
+                      <p className="text-orange-600 text-sm mb-2">→ {meaning.vietnamese}</p>
+                    )}
+
+                    {meaning.examples.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-gray-600">Ví dụ:</p>
+                        {meaning.examples.slice(0, 2).map((example, exIdx) => (
+                          <p key={exIdx} className="text-sm text-gray-600 italic">
+                            "{example}"
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Study Actions */}
+          {showMeaning && (
+            <div className="flex gap-3 justify-center pt-4">
+              <Button
+                onClick={() => markAsStudied(false)}
+                variant={isKnown ? 'outline' : 'destructive'}
+                size="lg"
+                className="flex-1 max-w-xs"
+              >
+                <XCircle className="mr-2 h-4 w-4" />
+                Chưa biết
+              </Button>
+
+              <Button
+                onClick={() => markAsStudied(true)}
+                variant={isKnown ? 'default' : 'outline'}
+                size="lg"
+                className="flex-1 max-w-xs"
+              >
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Đã biết
+              </Button>
+            </div>
+          )}
+
+          {/* Study completion */}
+          {currentWordIndex === words.length - 1 && studiedWords.size > 0 && (
+            <div className="bg-green-50 p-4 rounded-lg">
+              <p className="text-green-700 font-medium mb-2">
+                🎉 Hoàn thành! Bạn đã học {studiedWords.size}/{words.length} từ
+              </p>
+              <Button onClick={resetStudy} variant="outline" size="sm">
+                <RotateCcw className="mr-2 h-3 w-3" />
+                Học lại
+              </Button>
+            </div>
+          )}
+
+          {/* Word metadata */}
+          <div className="text-xs text-gray-400 pt-4 border-t">
+            <div className="flex items-center justify-center gap-1">
+              <Calendar className="h-3 w-3" />
+              Thêm bởi {currentWord.addedBy.userName}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2">
-        {words.map(word => (
-          <Tooltip key={word._id} delayDuration={300}>
-            <TooltipTrigger asChild>
-              <Card className="hover:shadow-lg transition-all duration-300 cursor-pointer hover:scale-105 border-2 hover:border-blue-300">
-                <CardContent className="p-3 text-center">
-                  <h3 className="font-bold text-blue-600 text-lg mb-2">{word.word}</h3>
-
-                  {/* Chỉ hiển thị phiên âm IPA */}
-                  <div className="space-y-1 mb-2">
-                    {word.pronunciation.uk && (
-                      <p className="text-xs text-gray-600">🇬🇧 /{word.pronunciation.uk}/</p>
-                    )}
-                    {word.pronunciation.us && (
-                      <p className="text-xs text-gray-600">🇺🇸 /{word.pronunciation.us}/</p>
-                    )}
-                  </div>
-
-                  <div className="flex flex-wrap justify-center gap-1 mt-2">
-                    {word.level && (
-                      <Badge variant="secondary" className="text-xs">
-                        {word.level}
-                      </Badge>
-                    )}
-                    <div className="flex gap-1">
-                      {word.audio.uk && (
-                        <Badge variant="outline" className="text-xs">
-                          🇬🇧
-                        </Badge>
-                      )}
-                      {word.audio.us && (
-                        <Badge variant="outline" className="text-xs">
-                          🇺🇸
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TooltipTrigger>
-            <TooltipContent
-              side="right"
-              className="max-w-sm p-4 bg-white border shadow-lg"
-              sideOffset={10}
-            >
-              <div className="space-y-2">
-                <div className="border-b pb-2">
-                  <h4 className="font-bold text-blue-600 text-lg">{word.word}</h4>
-
-                  {/* Pronunciation - Cả UK và US */}
-                  <div className="space-y-1 my-2">
-                    {word.pronunciation.uk && (
-                      <p className="text-sm text-gray-600">🇬🇧 /{word.pronunciation.uk}/</p>
-                    )}
-                    {word.pronunciation.us && (
-                      <p className="text-sm text-gray-600">🇺🇸 /{word.pronunciation.us}/</p>
-                    )}
-                  </div>
-
-                  <p className="text-green-600 font-medium">{word.vietnamese}</p>
-                </div>
-
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {word.meanings.slice(0, 2).map((meaning, idx) => (
-                    <div key={idx} className="border-l-2 border-blue-200 pl-2">
-                      <Badge variant="outline" className="text-xs mb-1">
-                        {meaning.partOfSpeech}
-                      </Badge>
-                      <p className="text-sm text-gray-700 mb-1">{meaning.definition}</p>
-                      {meaning.vietnamese && (
-                        <p className="text-sm text-green-600 italic mb-1">→ {meaning.vietnamese}</p>
-                      )}
-                      {meaning.examples[0] && (
-                        <p className="text-xs text-gray-500 italic">"{meaning.examples[0]}"</p>
-                      )}
-                    </div>
-                  ))}
-                  {word.meanings.length > 2 && (
-                    <p className="text-xs text-gray-400 italic">
-                      +{word.meanings.length - 2} nghĩa khác...
-                    </p>
-                  )}
-                </div>
-
-                {/* Audio Buttons - Cả UK và US */}
-                <div className="flex gap-1 pt-2 border-t">
-                  {/* UK Audio Button */}
-                  {word.audio.uk ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={e => {
-                        e.stopPropagation();
-                        playAudio(word, 'uk');
-                      }}
-                      className="h-6 px-2 text-xs"
-                    >
-                      <Volume2 className="h-2 w-2 mr-1" />
-                      🇬🇧
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled
-                      className="h-6 px-2 text-xs opacity-50"
-                    >
-                      <VolumeX className="h-2 w-2 mr-1" />
-                      🇬🇧
-                    </Button>
-                  )}
-
-                  {/* US Audio Button */}
-                  {word.audio.us ? (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={e => {
-                        e.stopPropagation();
-                        playAudio(word, 'us');
-                      }}
-                      className="h-6 px-2 text-xs"
-                    >
-                      <Volume2 className="h-2 w-2 mr-1" />
-                      🇺🇸
-                    </Button>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled
-                      className="h-6 px-2 text-xs opacity-50"
-                    >
-                      <VolumeX className="h-2 w-2 mr-1" />
-                      🇺🇸
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        ))}
+      {/* Study Controls */}
+      <div className="flex justify-center gap-2">
+        <Button onClick={resetStudy} variant="outline" size="sm">
+          <RotateCcw className="mr-2 h-3 w-3" />
+          Bắt đầu lại
+        </Button>
       </div>
-
-      {pagination.pages > 1 && (
-        <Card>
-          <CardContent className="p-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-gray-600">
-                Trang {pagination.page}/{pagination.pages} - {pagination.total} từ
-                {selectedDate !== 'all' && <span className="text-blue-600 ml-1">(đã lọc)</span>}
-              </span>
-              <div className="flex gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(pagination.page - 1)}
-                  disabled={pagination.page === 1}
-                  className="h-7 px-2"
-                >
-                  <ChevronLeft className="h-3 w-3" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onPageChange(pagination.page + 1)}
-                  disabled={pagination.page === pagination.pages}
-                  className="h-7 px-2"
-                >
-                  <ChevronRight className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
