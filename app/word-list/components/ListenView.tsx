@@ -25,6 +25,28 @@ import {
   ChevronUp,
 } from 'lucide-react';
 
+// interface WordData {
+//   _id: string;
+//   word: string;
+//   pronunciation: {
+//     uk: string;
+//     us: string;
+//   };
+//   audio: {
+//     uk: string;
+//     us: string;
+//   };
+//   level: string;
+//   frequency: string;
+//   meanings: Array<{
+//     partOfSpeech: string;
+//     definition: string;
+//     examples: string[];
+//     vietnamese?: string;
+//   }>;
+//   vietnamese: string;
+//   createdAt: string;
+// }
 interface WordData {
   _id: string;
   word: string;
@@ -46,6 +68,12 @@ interface WordData {
   }>;
   vietnamese: string;
   createdAt: string;
+  addedBy: {
+    userId: string;
+    userEmail: string;
+    userName: string;
+    addedAt: string;
+  } | null;
 }
 
 interface ListenViewProps {
@@ -61,6 +89,8 @@ interface ListenViewProps {
   onPageChange: (page: number) => Promise<void>;
   getAudioUrl: (word: WordData) => string;
   getPronunciation: (word: WordData) => string;
+  isAuthenticated: boolean;
+  currentUserId: any;
 }
 
 export default function ListenView({

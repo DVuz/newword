@@ -584,7 +584,6 @@ export default function WordList() {
                   onPageChange={handlePageChange}
                   getAudioUrl={getAudioUrl}
                   getPronunciation={getPronunciation}
-                  getUserBadge={getUserBadge}
                   isAuthenticated={!!userInfo}
                   currentUserId={userInfo?.userId}
                 />
