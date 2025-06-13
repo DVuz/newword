@@ -39,7 +39,7 @@ import StudyView from './components/StudyView';
 import FlashcardView from './components/FlashcardView';
 import ListenView from './components/ListenView';
 
-interface WordData {
+export interface WordData {
   _id: string;
   word: string;
   pronunciation: {
@@ -60,12 +60,12 @@ interface WordData {
   }>;
   vietnamese: string;
   createdAt: string;
-  addedBy?: {
+  addedBy: {
     userId: string;
     userEmail: string;
     userName: string;
     addedAt: string;
-  };
+  } | null;
 }
 
 interface DateStats {

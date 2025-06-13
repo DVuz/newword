@@ -43,7 +43,7 @@ interface WordData {
     userEmail: string;
     userName: string;
     addedAt: string;
-  };
+  } | null;
 }
 
 interface ListenViewProps {
@@ -400,7 +400,7 @@ export default function ListenView({
             </span>
             <div className="flex items-center gap-1 text-xs text-gray-400">
               <Calendar className="h-3 w-3" />
-              Thêm bởi {currentWord.addedBy.userName}
+              Thêm bởi {currentWord.addedBy?.userName || 'Ẩn danh'}
             </div>
           </div>
         </CardContent>

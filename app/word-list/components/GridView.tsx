@@ -32,7 +32,7 @@ interface WordData {
     userEmail: string;
     userName: string;
     addedAt: string;
-  };
+  }|null;
 }
 
 interface GridViewProps {
@@ -89,7 +89,7 @@ export default function GridView({
   };
 
   const deleteWord = async (word: WordData) => {
-    if (!isAuthenticated || word.addedBy.userId !== currentUserId) {
+    if (!isAuthenticated || !word.addedBy || word.addedBy.userId !== currentUserId) {
       return;
     }
 
@@ -125,7 +125,7 @@ export default function GridView({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
         {words.map(word => {
           const userBadge = getUserBadge(word.addedBy);
-          const isMyWord = currentUserId && word.addedBy.userId === currentUserId;
+          const isMyWord = currentUserId && word.addedBy && word.addedBy.userId === currentUserId;
           const IconComponent = userBadge.icon;
 
           return (
@@ -229,7 +229,7 @@ export default function GridView({
                         </TooltipTrigger>
                         <TooltipContent>
                           <p className="text-xs">
-                            Thêm bởi {word.addedBy.userName} lúc {formatDate(word.addedBy.addedAt)}
+                            Thêm bởi {word.addedBy?.userName || 'Không rõ'} lúc {formatDate(word.addedBy?.addedAt || word.createdAt)}
                           </p>
                         </TooltipContent>
                       </Tooltip>

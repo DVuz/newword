@@ -40,7 +40,7 @@ interface WordData {
     userEmail: string;
     userName: string;
     addedAt: string;
-  };
+  } | null;
 }
 
 interface FlashcardViewProps {
@@ -285,7 +285,7 @@ export default function FlashcardView({
                 {/* Date info */}
                 <div className="text-xs text-gray-400 text-center flex items-center justify-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  Thêm bởi {currentWord.addedBy.userName}
+                  Thêm bởi {currentWord.addedBy?.userName || 'Ẩn danh'}
                 </div>
               </div>
             </CardContent>

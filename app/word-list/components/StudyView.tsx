@@ -44,7 +44,7 @@ interface WordData {
     userEmail: string;
     userName: string;
     addedAt: string;
-  };
+  }|null ;
 }
 
 interface StudyViewProps {
@@ -338,7 +338,7 @@ export default function StudyView({
           <div className="text-xs text-gray-400 pt-4 border-t">
             <div className="flex items-center justify-center gap-1">
               <Calendar className="h-3 w-3" />
-              Thêm bởi {currentWord.addedBy.userName}
+              Thêm bởi {currentWord.addedBy?.userName || 'Không rõ'}
             </div>
           </div>
         </CardContent>
