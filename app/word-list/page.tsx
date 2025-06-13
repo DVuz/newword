@@ -39,7 +39,7 @@ import StudyView from './components/StudyView';
 import FlashcardView from './components/FlashcardView';
 import ListenView from './components/ListenView';
 
-export interface WordData {
+interface WordData {
   _id: string;
   word: string;
   pronunciation: {
