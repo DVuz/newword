@@ -38,6 +38,13 @@ const USERS: User[] = [
     password: '02062002',
     name: 'Thắng',
     role: 'user'
+  },
+  {
+    id: '5',
+    email: 'thangtho@gmail.com',
+    password: '02062002',
+    name: 'Thành Thắng',
+    role: 'user'
   }
 ];
 
