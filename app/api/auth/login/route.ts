@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { sign } from 'jsonwebtoken';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Hardcoded users database
 interface User {
@@ -16,36 +16,36 @@ const USERS: User[] = [
     email: 'admin@gmail.com',
     password: 'admin26',
     name: 'Admin',
-    role: 'admin'
+    role: 'admin',
   },
   {
     id: '2',
     email: 'tranhongtham2604@gmail.com',
     password: 'anhdungsieudeptrai',
-    name: 'Trần Hồng Thâm',
-    role: 'user'
+    name: 'Trần Hồng Thắm',
+    role: 'user',
   },
   {
     id: '3',
     email: 'vuthuthuy@gmail.com',
     password: '02062002',
     name: 'Vũ Thu Thúy',
-    role: 'user'
+    role: 'user',
   },
   {
     id: '4',
     email: 'thang@gmail.com',
     password: '02062002',
     name: 'Thắng',
-    role: 'user'
+    role: 'user',
   },
   {
     id: '5',
     email: 'thangtho@gmail.com',
     password: '02062002',
     name: 'Thành Thắng',
-    role: 'user'
-  }
+    role: 'user',
+  },
 ];
 
 // JWT secret key (in production, this should be in environment variables)
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
       return NextResponse.json(
         {
           success: false,
-          error: 'Email và mật khẩu là bắt buộc'
+          error: 'Email và mật khẩu là bắt buộc',
         },
         { status: 400 }
       );
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
       return NextResponse.json(
         {
           success: false,
-          error: 'Email hoặc mật khẩu không đúng'
+          error: 'Email hoặc mật khẩu không đúng',
         },
         { status: 401 }
       );
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
       return NextResponse.json(
         {
           success: false,
-          error: 'Email hoặc mật khẩu không đúng'
+          error: 'Email hoặc mật khẩu không đúng',
         },
         { status: 401 }
       );
@@ -124,7 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
       name: user.name,
       role: user.role,
       iat: Math.floor(Date.now() / 1000),
-      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours
+      exp: Math.floor(Date.now() / 1000) + 24 * 60 * 60, // 24 hours
     };
 
     const token = sign(tokenPayload, JWT_SECRET);
@@ -144,7 +144,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
         },
       },
     });
-
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('❌ Login API Error:', error);
@@ -152,7 +151,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
     return NextResponse.json(
       {
         success: false,
-        error: `Lỗi server: ${errorMessage}`
+        error: `Lỗi server: ${errorMessage}`,
       },
       { status: 500 }
     );
@@ -165,10 +164,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const authorization = request.headers.get('authorization');
 
     if (!authorization) {
-      return NextResponse.json(
-        { error: 'No authorization header' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'No authorization header' }, { status: 401 });
     }
 
     const token = authorization.replace('Bearer ', '');
@@ -180,17 +176,10 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         data: decoded,
       });
     } catch (tokenError) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
-
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
 
