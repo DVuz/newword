@@ -48,8 +48,8 @@ const USERS: User[] = [
   },
   {
     id: '6',
-    email: 'thanhvuong@gmail.com',
-    password: '02062002',
+    email: 'vuongomg11@gmail.com',
+    password: '25112002',
     name: 'Vương',
     role: 'user',
   },
