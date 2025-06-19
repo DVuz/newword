@@ -46,6 +46,20 @@ const USERS: User[] = [
     name: 'Thành Thắng',
     role: 'user',
   },
+  {
+    id: '6',
+    email: 'thanhvuong@gmail.com',
+    password: '02062002',
+    name: 'Vương',
+    role: 'user',
+  },
+    {
+    id: '7',
+    email: 'phâmnhduong@gmail.com',
+    password: '02062002',
+    name: 'Dương',
+    role: 'user',
+  },
 ];
 
 // JWT secret key (in production, this should be in environment variables)
