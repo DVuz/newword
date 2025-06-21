@@ -1,8 +1,7 @@
 'use client';
-import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { ArrowRight, Crown, LogIn, User } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, User, LogIn } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export default function Home() {
   const [selectedMode, setSelectedMode] = useState<string | null>(null);
@@ -66,6 +65,20 @@ export default function Home() {
       path: '/terms-list',
       requireAuth: true,
     },
+    // ✅ Admin Only Feature - Connectors
+    ...(userInfo?.role === 'admin'
+      ? [
+          {
+            id: 'connectors',
+            title: 'Từ Nối Câu',
+            description: 'Tài liệu từ nối câu chuyên nghiệp (Admin Only)',
+            color: 'from-purple-600 to-indigo-700',
+            path: '/connectors',
+            requireAuth: true,
+            adminOnly: true,
+          },
+        ]
+      : []),
   ];
 
   // Grammar features - smaller buttons
@@ -126,45 +139,44 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-end">
-      {/* Background Image */}
-      <div className="absolute inset-0 z-0">
-        <Image
-          src="https://res.cloudinary.com/dfizo8h6h/image/upload/v1749281277/photo-1462258409682-731445253757_d9mxww.jpg"
-          alt="Background"
-          fill
-          className="object-cover object-center"
-          priority
-          quality={100}
-        />
-        {/* Overlay gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative overflow-hidden">
+      {/* Animated background patterns */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-0 -left-4 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
+        <div className="absolute top-0 -right-4 w-72 h-72 bg-yellow-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-2000"></div>
+        <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob animation-delay-4000"></div>
       </div>
 
       {/* User Info Bar - Top Right */}
-      <div className="absolute top-4 right-4 z-20">
+      <div className="absolute top-6 right-6 z-20">
         {isLoggedIn ? (
-          <div className="flex items-center gap-3 bg-white/15 backdrop-blur-lg border border-white/20 rounded-xl px-4 py-2">
+          <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 shadow-lg">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <User className="h-4 w-4 text-white" />
+                {userInfo?.role === 'admin' ? (
+                  <Crown className="h-4 w-4 text-yellow-300" />
+                ) : (
+                  <User className="h-4 w-4 text-white" />
+                )}
               </div>
               <div className="text-white">
                 <p className="text-sm font-medium">{userInfo?.name || userInfo?.email || 'User'}</p>
-                <p className="text-xs text-white/70">Đã đăng nhập</p>
+                <p className="text-xs text-white/70">
+                  {userInfo?.role === 'admin' ? 'Admin' : 'Member'}
+                </p>
               </div>
             </div>
             <button
               onClick={handleLogout}
-              className="text-white/70 hover:text-white text-xs underline underline-offset-2 transition-colors ml-2"
+              className="text-white/70 hover:text-white text-xs px-2 py-1 rounded-md hover:bg-white/10 transition-all"
             >
-              Đăng xuất
+              Thoát
             </button>
           </div>
         ) : (
           <button
             onClick={() => router.push('/login')}
-            className="flex items-center gap-2 bg-white/15 backdrop-blur-lg border border-white/20 rounded-xl px-4 py-2 text-white hover:bg-white/25 transition-all duration-300"
+            className="flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 text-white hover:bg-white/20 transition-all shadow-lg"
           >
             <LogIn className="h-4 w-4" />
             <span className="text-sm font-medium">Đăng nhập</span>
@@ -172,166 +184,198 @@ export default function Home() {
         )}
       </div>
 
-      {/* Content - Moved to bottom */}
-      <div className="relative z-10 w-full px-4 pb-8">
-        <div className="max-w-4xl mx-auto space-y-4">
-          {/* Welcome Message */}
-          {isLoggedIn && userInfo && (
-            <div className="text-center mb-6">
-              <h1 className="text-white text-xl font-bold mb-2">
-                Chào mừng trở lại, {userInfo.name || 'User'}! 👋
+      {/* Main Content */}
+      <div className="relative z-10 min-h-screen flex flex-col justify-center px-6">
+        <div className="max-w-6xl mx-auto w-full">
+          {/* Header Section */}
+          <div className="text-center mb-12">
+            <div className="mb-6">
+              <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent mb-4">
+                NewWord
               </h1>
-              <p className="text-white/70 text-sm">Hãy tiếp tục hành trình học tập của bạn</p>
+              <div className="w-20 h-1 bg-gradient-to-r from-blue-500 to-purple-600 mx-auto rounded-full"></div>
             </div>
-          )}
 
-          {!isLoggedIn && (
-            <div className="text-center mb-6">
-              <h1 className="text-white text-xl font-bold mb-2">Chào mừng đến với NewWord! 📚</h1>
-              <p className="text-white/70 text-sm mb-4">
-                Đăng nhập để truy cập đầy đủ tính năng học tập
-              </p>
-              <button
-                onClick={() => router.push('/login')}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-2 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                Đăng nhập ngay
-              </button>
-            </div>
-          )}
+            {isLoggedIn && userInfo ? (
+              <div className="space-y-2">
+                <h2 className="text-xl md:text-2xl text-white/90 flex items-center justify-center gap-2">
+                  Xin chào,{' '}
+                  <span className="font-semibold text-blue-300">{userInfo.name || 'User'}</span>!
+                  {userInfo?.role === 'admin' && (
+                    <div className="flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-orange-500 px-2 py-1 rounded-full">
+                      <Crown className="h-4 w-4 text-white" />
+                      <span className="text-white text-sm font-medium">Admin</span>
+                    </div>
+                  )}
+                </h2>
+                <p className="text-white/70">
+                  {userInfo?.role === 'admin'
+                    ? 'Chào mừng quản trị viên! Bạn có thể truy cập tất cả tính năng đặc biệt.'
+                    : 'Sẵn sàng học tập và khám phá ngôn ngữ mới!'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <h2 className="text-xl md:text-2xl text-white/90">
+                  Ứng dụng học từ vựng thông minh với AI
+                </h2>
+                <p className="text-white/70 max-w-2xl mx-auto">
+                  Khám phá và học từ vựng tiếng Anh, thuật ngữ lập trình với sự hỗ trợ của AI
+                </p>
+                <button
+                  onClick={() => router.push('/login')}
+                  className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                >
+                  <LogIn className="h-5 w-5" />
+                  Bắt đầu ngay
+                </button>
+              </div>
+            )}
+          </div>
 
-          {/* Main Features Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Features Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-8">
             {mainFeatures.map(feature => {
               const isDisabled = feature.requireAuth && !isLoggedIn;
 
               return (
-                <button
+                <div
                   key={feature.id}
                   className={`
                     group relative overflow-hidden
-                    bg-white/15 backdrop-blur-lg border border-white/20
-                    rounded-xl p-4 text-center shadow-xl
+                    bg-white/5 backdrop-blur-md border border-white/10
+                    rounded-2xl p-6 shadow-lg hover:shadow-xl
                     transition-all duration-300 transform
                     ${
                       isDisabled
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-white/25 hover:scale-105 hover:border-white/40'
+                        ? 'opacity-60 cursor-not-allowed'
+                        : 'hover:bg-white/10 hover:scale-[1.02] hover:border-white/20 cursor-pointer'
                     }
-                    ${selectedMode === feature.id ? 'scale-105 bg-white/30 border-white/50' : ''}
-                    ${selectedMode !== null && selectedMode !== feature.id ? 'opacity-50' : ''}
+                    ${selectedMode === feature.id ? 'scale-[1.02] bg-white/15 border-white/30' : ''}
                   `}
-                  onClick={() => handleNavigation(feature.path, feature.id, feature.requireAuth)}
-                  disabled={selectedMode !== null}
+                  onClick={() =>
+                    !isDisabled && handleNavigation(feature.path, feature.id, feature.requireAuth)
+                  }
                 >
                   {/* Gradient background */}
                   <div
                     className={`
-                    absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity duration-300
-                    bg-gradient-to-br ${feature.color}
-                  `}
+                      absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-300
+                      bg-gradient-to-br ${feature.color}
+                    `}
                   ></div>
 
                   {/* Content */}
                   <div className="relative z-10">
-                    {/* Lock icon for protected features when not logged in */}
-                    {isDisabled && (
-                      <div className="absolute top-0 right-0 bg-red-500/80 rounded-full p-1">
-                        <LogIn className="h-3 w-3 text-white" />
+                    {/* Top badges */}
+                    <div className="flex justify-between items-start mb-4">
+                      <div
+                        className={`
+                        w-12 h-12 rounded-xl flex items-center justify-center
+                        bg-gradient-to-br ${feature.color} shadow-lg
+                      `}
+                      >
+                        {feature.adminOnly ? (
+                          <Crown className="h-6 w-6 text-white" />
+                        ) : (
+                          <div className="w-6 h-6 bg-white/30 rounded-full"></div>
+                        )}
                       </div>
-                    )}
+
+                      {feature.adminOnly && (
+                        <div className="bg-gradient-to-r from-yellow-400 to-orange-500 px-2 py-1 rounded-full">
+                          <span className="text-white text-xs font-bold">ADMIN</span>
+                        </div>
+                      )}
+
+                      {isDisabled && (
+                        <div className="bg-red-500/80 px-2 py-1 rounded-full">
+                          <LogIn className="h-3 w-3 text-white" />
+                        </div>
+                      )}
+                    </div>
 
                     {/* Title */}
-                    <h3 className="text-sm font-bold text-white mb-2 group-hover:text-yellow-100 transition-colors duration-300">
+                    <h3 className="text-lg font-bold text-white mb-2 group-hover:text-blue-200 transition-colors">
                       {feature.title}
                     </h3>
 
                     {/* Description */}
-                    <p className="text-white/70 text-xs leading-relaxed group-hover:text-white/90 transition-colors duration-300">
+                    <p className="text-white/70 text-sm leading-relaxed group-hover:text-white/90 transition-colors">
                       {feature.description}
-                      {isDisabled && (
-                        <span className="block text-red-300 text-xs mt-1">Cần đăng nhập</span>
-                      )}
                     </p>
 
-                    {/* Arrow indicator */}
-                    <div className="mt-3 flex justify-center">
-                      <ArrowRight className="h-3 w-3 text-white/50 group-hover:text-white group-hover:translate-x-1 transition-all duration-300" />
+                    {isDisabled && (
+                      <p className="text-red-300 text-xs mt-2 font-medium">
+                        Cần đăng nhập để sử dụng
+                      </p>
+                    )}
+
+                    {/* Arrow */}
+                    <div className="mt-4 flex justify-end">
+                      <ArrowRight className="h-5 w-5 text-white/40 group-hover:text-white/80 group-hover:translate-x-1 transition-all duration-300" />
                     </div>
                   </div>
-
-                  {/* Hover effect overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </button>
+                </div>
               );
             })}
           </div>
 
-          {/* Grammar Features - Smaller buttons */}
-          <div className="grid grid-cols-2 gap-3 max-w-md mx-auto">
-            {grammarFeatures.map(feature => {
-              const isDisabled = feature.requireAuth && !isLoggedIn;
+          {/* Grammar Features - Compact row */}
+          <div className="max-w-2xl mx-auto">
+            <h3 className="text-lg font-semibold text-white/90 mb-4 text-center">Ngữ pháp</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {grammarFeatures.map(feature => {
+                const isDisabled = feature.requireAuth && !isLoggedIn;
 
-              return (
-                <button
-                  key={feature.id}
-                  className={`
-                    group relative overflow-hidden
-                    bg-white/10 backdrop-blur-lg border border-white/15
-                    rounded-lg p-3 text-center shadow-lg
-                    transition-all duration-300 transform
-                    ${
-                      isDisabled
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-white/20 hover:scale-105 hover:border-white/30'
-                    }
-                    ${selectedMode === feature.id ? 'scale-105 bg-white/25 border-white/40' : ''}
-                    ${selectedMode !== null && selectedMode !== feature.id ? 'opacity-50' : ''}
-                  `}
-                  onClick={() => handleNavigation(feature.path, feature.id, feature.requireAuth)}
-                  disabled={selectedMode !== null}
-                >
-                  {/* Gradient background */}
+                return (
                   <div
+                    key={feature.id}
                     className={`
-                    absolute inset-0 opacity-15 group-hover:opacity-25 transition-opacity duration-300
-                    bg-gradient-to-br ${feature.color}
-                  `}
-                  ></div>
-
-                  {/* Content */}
-                  <div className="relative z-10">
-                    {/* Lock icon for protected features when not logged in */}
-                    {isDisabled && (
-                      <div className="absolute top-0 right-0 bg-red-500/80 rounded-full p-1">
-                        <LogIn className="h-2.5 w-2.5 text-white" />
+                      group relative overflow-hidden
+                      bg-white/5 backdrop-blur-md border border-white/10
+                      rounded-xl p-4 shadow-lg
+                      transition-all duration-300 transform
+                      ${
+                        isDisabled
+                          ? 'opacity-60 cursor-not-allowed'
+                          : 'hover:bg-white/10 hover:scale-[1.02] hover:border-white/20 cursor-pointer'
+                      }
+                    `}
+                    onClick={() =>
+                      !isDisabled && handleNavigation(feature.path, feature.id, feature.requireAuth)
+                    }
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`
+                          w-8 h-8 rounded-lg flex items-center justify-center
+                          bg-gradient-to-br ${feature.color}
+                        `}
+                        >
+                          <div className="w-4 h-4 bg-white/30 rounded-full"></div>
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-white group-hover:text-blue-200 transition-colors">
+                            {feature.title}
+                          </h4>
+                          <p className="text-xs text-white/60 group-hover:text-white/80 transition-colors">
+                            {feature.description}
+                          </p>
+                        </div>
                       </div>
-                    )}
 
-                    {/* Title */}
-                    <h3 className="text-xs font-bold text-white mb-1 group-hover:text-yellow-100 transition-colors duration-300">
-                      {feature.title}
-                    </h3>
-
-                    {/* Description */}
-                    <p className="text-white/60 text-xs leading-relaxed group-hover:text-white/80 transition-colors duration-300">
-                      {feature.description}
-                      {isDisabled && (
-                        <span className="block text-red-300 text-xs mt-1">Cần đăng nhập</span>
+                      {isDisabled ? (
+                        <LogIn className="h-4 w-4 text-red-400" />
+                      ) : (
+                        <ArrowRight className="h-4 w-4 text-white/40 group-hover:text-white/80 group-hover:translate-x-1 transition-all duration-300" />
                       )}
-                    </p>
-
-                    {/* Arrow indicator */}
-                    <div className="mt-2 flex justify-center">
-                      <ArrowRight className="h-2.5 w-2.5 text-white/40 group-hover:text-white/70 group-hover:translate-x-0.5 transition-all duration-300" />
                     </div>
                   </div>
-
-                  {/* Hover effect overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </button>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -339,15 +383,42 @@ export default function Home() {
       {/* Loading Animation */}
       {selectedMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white/95 backdrop-blur-lg rounded-xl p-6 text-center shadow-2xl border border-white/20 max-w-xs w-full mx-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-3 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-700 text-sm font-medium">
-              Đang chuyển đến{' '}
-              {[...mainFeatures, ...grammarFeatures].find(f => f.id === selectedMode)?.title}...
+          <div className="bg-white/95 backdrop-blur-lg rounded-2xl p-8 text-center shadow-2xl border border-white/20 max-w-sm w-full mx-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-700 font-semibold mb-2">Đang tải...</p>
+            <p className="text-gray-500 text-sm">
+              {[...mainFeatures, ...grammarFeatures].find(f => f.id === selectedMode)?.title}
             </p>
           </div>
         </div>
       )}
+
+      {/* Add custom styles for animations */}
+      <style jsx>{`
+        @keyframes blob {
+          0% {
+            transform: translate(0px, 0px) scale(1);
+          }
+          33% {
+            transform: translate(30px, -50px) scale(1.1);
+          }
+          66% {
+            transform: translate(-20px, 20px) scale(0.9);
+          }
+          100% {
+            transform: translate(0px, 0px) scale(1);
+          }
+        }
+        .animate-blob {
+          animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+      `}</style>
     </div>
   );
 }
