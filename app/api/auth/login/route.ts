@@ -55,7 +55,7 @@ const USERS: User[] = [
   },
     {
     id: '7',
-    email: 'phâmnhduong@gmail.com',
+    email: 'anhduongpham28@gmail.com',
     password: '02062002',
     name: 'Dương',
     role: 'user',
